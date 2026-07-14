@@ -33,6 +33,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
+# تشخیص محیط تولید
+IS_PRODUCTION = os.getenv("ENV", "development") == "production"
+
 # ========== لاگ ==========
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -49,11 +52,11 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS – برای محیط تولید، آدرس فرانت‌اند را قرار دهید
-# فعلاً همه‌ی دامنه‌ها مجاز هستند تا تست آسان‌تر شود
+# CORS – در تولید، دامنه‌ی فرانت‌اند را مشخص کنید
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # بعداً با آدرس واقعی فرانت‌اند (مثلاً ["https://minouta-frontend.onrender.com"]) جایگزین کنید
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -258,7 +261,8 @@ else:
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+    connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {},
+    pool_pre_ping=True,  # جلوگیری از خطای اتصال در دیتابیس‌های سرویس‌دهنده (مانند Neon)
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -440,20 +444,24 @@ async def login(request: Request, data: UserLogin, response: Response):
     db.close()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(401, "Invalid credentials")
+    
     token = create_access_token({"sub": str(user.id)})
+    
+    # تنظیم کوکی بر اساس محیط (تولید یا توسعه)
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        secure=False,  # در محیط تولید (HTTPS) باید True باشد
-        samesite="lax"
+        secure=IS_PRODUCTION,          # در محیط HTTPS (تولید) True
+        samesite="none" if IS_PRODUCTION else "lax",  # در تولید none برای کراس‌دامین
+        path="/",
     )
     return {"message": "Login successful", "username": user.username}
 
 @app.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie("access_token")
+    response.delete_cookie("access_token", path="/")
     return {"message": "Logged out"}
 
 @app.get("/auth/me")

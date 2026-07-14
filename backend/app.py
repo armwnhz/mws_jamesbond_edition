@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-IS_PRODUCTION = os.getenv("ENV") == "production"  # ← برای تشخیص محیط HTTPS
+IS_PRODUCTION = os.getenv("ENV") == "production"  # در Render: ENV=production
 
 # ========== لاگ ==========
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -50,15 +50,36 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ========== CORS – تنظیم برای دامنه‌های مختلف ==========
+# ========== CORS – تنظیم کامل و صحیح ==========
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend.onrender.com")
+ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
-    allow_credentials=True,   # ← مهم: اجازه ارسال کوکی
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,        # اجازه ارسال کوکی
+    allow_methods=["*"],           # همه متدها (GET, POST, OPTIONS, ...)
+    allow_headers=["*"],           # همه هدرها
+    expose_headers=["*"],          # هدرهای خروجی
 )
+
+# ========== هندلر دستی برای OPTIONS (در صورت لزوم) ==========
+@app.options("/{full_path:path}")
+async def options_handler(request: Request):
+    response = Response()
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Cookie, Accept"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Max-Age"] = "86400"
+    return response
 
 # ========== مدل‌های داده ==========
 class UserCreate(BaseModel):
@@ -139,7 +160,7 @@ async def get_current_user_required(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-# ========== Regex و توابع استخراج ==========
+# ========== Regex ==========
 _MOBILE_REGEX = re.compile(r'(?<!\d)(?:0|\+98)9[0-9]{9}(?!\d)')
 _LANDLINE_REGEX = re.compile(r'(?<!\d)(?:\+98|0098)?0[1-8][0-9]{9}(?!\d)')
 _EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', re.IGNORECASE)
@@ -441,15 +462,16 @@ async def login(request: Request, data: UserLogin, response: Response):
         raise HTTPException(401, "Invalid credentials")
     token = create_access_token({"sub": str(user.id)})
     
-    # ========== تنظیم کوکی برای محیط تولید (HTTPS) ==========
+    # ========== تنظیم کوکی ==========
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        secure=IS_PRODUCTION,          # ← در تولید True
-        samesite="none" if IS_PRODUCTION else "lax",  # ← در تولید none
+        secure=IS_PRODUCTION,                # در تولید True
+        samesite="none" if IS_PRODUCTION else "lax",
         path="/",
+        domain=None,
     )
     return {"message": "Login successful", "username": user.username}
 
@@ -511,7 +533,7 @@ async def scrape(request: Request, req: ScrapeRequest):
     db.close()
     return {"results": results}
 
-# --------------------- مسیرهای خاص تاریخچه (بدون {id}) ---------------------
+# --------------------- مسیرهای خاص تاریخچه ---------------------
 @app.get("/history")
 async def get_history(
     request: Request,
@@ -711,7 +733,7 @@ async def export_history_zip(request: Request):
     return StreamingResponse(zip_buffer, media_type="application/zip",
                              headers={"Content-Disposition": "attachment; filename=history_export.zip"})
 
-# --------------------- مسیرهای دارای {id} (بعد از تمام مسیرهای خاص) ---------------------
+# --------------------- مسیرهای دارای {id} ---------------------
 @app.get("/history/{id}")
 async def history_item(id: int, request: Request):
     user = await get_current_user_required(request)

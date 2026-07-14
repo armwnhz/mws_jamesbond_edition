@@ -15,6 +15,40 @@ import requests
 from fastapi import FastAPI, HTTPException, status, Request, Response, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+
+# ========== CORS – تنظیم کامل و نهایی ==========
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend-6dl0.onrender.com")
+ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "https://mws-frontend-6dl0.onrender.com",
+    "https://mws-frontend.onrender.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],   # ✅ OPTIONS را اضافه کنید
+    allow_headers=["*"],
+    expose_headers=["*"],
+)
+
+# ========== هندلر اختصاصی برای OPTIONS ==========
+@app.options("/{full_path:path}")
+async def options_handler(request: Request):
+    response = Response()
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Cookie, Accept"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Max-Age"] = "86400"
+    return response
 from pydantic import BaseModel, EmailStr, Field
 import uvicorn
 

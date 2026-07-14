@@ -32,9 +32,7 @@ from bs4 import BeautifulSoup
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-
-# تشخیص محیط تولید
-IS_PRODUCTION = os.getenv("ENV", "development") == "production"
+IS_PRODUCTION = os.getenv("ENV") == "production"  # ← برای تشخیص محیط
 
 # ========== لاگ ==========
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -52,12 +50,13 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS – در تولید، دامنه‌ی فرانت‌اند را مشخص کنید
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# ========== CORS – تنظیم برای دامنه‌های مختلف ==========
+# برای محیط تولید، آدرس فرانت‌اند را دقیقاً مشخص کنید
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend.onrender.com")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"],
+    allow_credentials=True,   # ← مهم: اجازه ارسال کوکی
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -141,7 +140,7 @@ async def get_current_user_required(request: Request):
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user
 
-# ========== Regex ==========
+# ========== Regex و توابع استخراج ==========
 _MOBILE_REGEX = re.compile(r'(?<!\d)(?:0|\+98)9[0-9]{9}(?!\d)')
 _LANDLINE_REGEX = re.compile(r'(?<!\d)(?:\+98|0098)?0[1-8][0-9]{9}(?!\d)')
 _EMAIL_REGEX = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', re.IGNORECASE)
@@ -249,12 +248,10 @@ class ScraperEngine:
         return results
 
 # ========== Database ==========
-# استفاده از DATABASE_URL اگر وجود داشته باشد (PostgreSQL در Render)
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = DATABASE_URL
 else:
-    # در غیر این صورت از SQLite در مسیر موقت استفاده کن (مناسب برای تست)
     import tempfile
     db_path = os.path.join(tempfile.gettempdir(), "scraper.db")
     SQLALCHEMY_DATABASE_URL = f"sqlite:///{db_path}"
@@ -262,7 +259,7 @@ else:
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {},
-    pool_pre_ping=True,  # جلوگیری از خطای اتصال در دیتابیس‌های سرویس‌دهنده (مانند Neon)
+    pool_pre_ping=True,
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -292,7 +289,6 @@ class ScrapeHistory(Base):
     deleted_at = Column(DateTime, nullable=True)
     user = relationship("User", back_populates="histories")
 
-# اضافه کردن ستون deleted_at اگر وجود نداشت (برای راحتی)
 try:
     with engine.connect() as conn:
         inspector = inspect(engine)
@@ -417,10 +413,10 @@ class DatabaseManager:
         self.session.close()
 
 # ================================================================
-#  مسیرها (Routes) – با ترتیب صحیح
+#  مسیرها (Routes)
 # ================================================================
 
-# --------------------- مسیرهای احراز هویت ---------------------
+# --------------------- احراز هویت ---------------------
 @app.post("/auth/register")
 @limiter.limit("5/minute")
 async def register(request: Request, data: UserCreate):
@@ -444,18 +440,18 @@ async def login(request: Request, data: UserLogin, response: Response):
     db.close()
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(401, "Invalid credentials")
-    
     token = create_access_token({"sub": str(user.id)})
     
-    # تنظیم کوکی بر اساس محیط (تولید یا توسعه)
+    # ========== تنظیم کوکی برای محیط تولید (HTTPS) ==========
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        secure=IS_PRODUCTION,          # در محیط HTTPS (تولید) True
-        samesite="none" if IS_PRODUCTION else "lax",  # در تولید none برای کراس‌دامین
+        secure=IS_PRODUCTION,          # ← در تولید True
+        samesite="none" if IS_PRODUCTION else "lax",  # ← در تولید none
         path="/",
+        domain=None,
     )
     return {"message": "Login successful", "username": user.username}
 
@@ -483,7 +479,7 @@ async def change_password(request: Request, data: ChangePassword):
     db.close()
     return {"message": "Password changed successfully"}
 
-# --------------------- مسیر اسکرپ ---------------------
+# --------------------- اسکرپ ---------------------
 @app.post("/scrape")
 async def scrape(request: Request, req: ScrapeRequest):
     user = await get_current_user_required(request)

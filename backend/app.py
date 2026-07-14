@@ -15,40 +15,6 @@ import requests
 from fastapi import FastAPI, HTTPException, status, Request, Response, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-
-
-# ========== CORS – تنظیم کامل و نهایی ==========
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend-6dl0.onrender.com")
-ALLOWED_ORIGINS = [
-    FRONTEND_URL,
-    "https://mws-frontend-6dl0.onrender.com",
-    "https://mws-frontend.onrender.com",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://127.0.0.1:3000",
-]
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],   # ✅ OPTIONS را اضافه کنید
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
-
-# ========== هندلر اختصاصی برای OPTIONS ==========
-@app.options("/{full_path:path}")
-async def options_handler(request: Request):
-    response = Response()
-    origin = request.headers.get("origin")
-    if origin in ALLOWED_ORIGINS:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Cookie, Accept"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Max-Age"] = "86400"
-    return response
 from pydantic import BaseModel, EmailStr, Field
 import uvicorn
 
@@ -84,10 +50,12 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ========== CORS – تنظیم کامل و صحیح ==========
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend.onrender.com")
+# ========== CORS – تنظیم کامل و نهایی ==========
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend-6dl0.onrender.com")
 ALLOWED_ORIGINS = [
     FRONTEND_URL,
+    "https://mws-frontend-6dl0.onrender.com",
+    "https://mws-frontend.onrender.com",
     "http://localhost:3000",
     "http://localhost:3001",
     "http://127.0.0.1:3000",
@@ -96,13 +64,13 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,        # اجازه ارسال کوکی
-    allow_methods=["*"],           # همه متدها (GET, POST, OPTIONS, ...)
-    allow_headers=["*"],           # همه هدرها
-    expose_headers=["*"],          # هدرهای خروجی
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["*"],
 )
 
-# ========== هندلر دستی برای OPTIONS (در صورت لزوم) ==========
+# ========== هندلر اختصاصی برای OPTIONS ==========
 @app.options("/{full_path:path}")
 async def options_handler(request: Request):
     response = Response()
@@ -496,7 +464,7 @@ async def login(request: Request, data: UserLogin, response: Response):
         raise HTTPException(401, "Invalid credentials")
     token = create_access_token({"sub": str(user.id)})
     
-    # ========== تنظیم کوکی ==========
+    # تنظیم کوکی برای محیط تولید (HTTPS)
     response.set_cookie(
         key="access_token",
         value=token,
@@ -567,7 +535,7 @@ async def scrape(request: Request, req: ScrapeRequest):
     db.close()
     return {"results": results}
 
-# --------------------- مسیرهای خاص تاریخچه ---------------------
+# --------------------- مسیرهای خاص تاریخچه (بدون {id}) ---------------------
 @app.get("/history")
 async def get_history(
     request: Request,
@@ -767,7 +735,7 @@ async def export_history_zip(request: Request):
     return StreamingResponse(zip_buffer, media_type="application/zip",
                              headers={"Content-Disposition": "attachment; filename=history_export.zip"})
 
-# --------------------- مسیرهای دارای {id} ---------------------
+# --------------------- مسیرهای دارای {id} (بعد از تمام مسیرهای خاص) ---------------------
 @app.get("/history/{id}")
 async def history_item(id: int, request: Request):
     user = await get_current_user_required(request)

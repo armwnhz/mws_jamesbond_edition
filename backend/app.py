@@ -32,7 +32,7 @@ from bs4 import BeautifulSoup
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
-IS_PRODUCTION = os.getenv("ENV") == "production"  # ← برای تشخیص محیط
+IS_PRODUCTION = os.getenv("ENV") == "production"  # ← برای تشخیص محیط HTTPS
 
 # ========== لاگ ==========
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -51,11 +51,10 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ========== CORS – تنظیم برای دامنه‌های مختلف ==========
-# برای محیط تولید، آدرس فرانت‌اند را دقیقاً مشخص کنید
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://mws-frontend.onrender.com")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[FRONTEND_URL, "http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:3000"],
     allow_credentials=True,   # ← مهم: اجازه ارسال کوکی
     allow_methods=["*"],
     allow_headers=["*"],
@@ -451,7 +450,6 @@ async def login(request: Request, data: UserLogin, response: Response):
         secure=IS_PRODUCTION,          # ← در تولید True
         samesite="none" if IS_PRODUCTION else "lax",  # ← در تولید none
         path="/",
-        domain=None,
     )
     return {"message": "Login successful", "username": user.username}
 

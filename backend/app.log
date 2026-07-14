@@ -1,0 +1,12 @@
+2026-07-14 22:41:01,578 - __main__ - INFO - Starting API server on port 8000
+2026-07-14 22:48:28,723 - __main__ - INFO - Starting API server on port 8000
+2026-07-14 22:52:12,938 - __main__ - INFO - Starting API server on port 8000
+2026-07-14 22:55:26,638 - __main__ - INFO - User armwnhz scraping 1 URLs with depth 0
+2026-07-14 22:55:26,639 - __main__ - INFO - Scraping URL: https://hamzehalizadeh.ir
+2026-07-14 22:57:55,378 - __main__ - INFO - User armwnhz scraping 1 URLs with depth 0
+2026-07-14 22:57:55,378 - __main__ - INFO - Scraping URL: https://hamzehalizadeh.ir
+2026-07-14 22:58:03,759 - __main__ - INFO - User armwnhz scraping 1 URLs with depth 0
+2026-07-14 22:58:03,759 - __main__ - INFO - Scraping URL: https://gilar.market'
+2026-07-14 22:58:03,760 - __main__ - ERROR - Error scraping https://gilar.market': HTTPSConnectionPool(host="gilar.market'", port=443): Max retries exceeded with url: / (Caused by NameResolutionError('HTTPSConnection(host="gilar.market\'", port=443): Failed to resolve \'gilar.market\'\' ([Errno 11001] getaddrinfo failed)'))
+2026-07-14 22:58:06,944 - __main__ - INFO - User armwnhz scraping 1 URLs with depth 0
+2026-07-14 22:58:06,944 - __main__ - INFO - Scraping URL: https://gilar.market

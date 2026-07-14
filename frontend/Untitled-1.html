@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕵️ مأمور جاسوسی</title>
+    <style>
+        /* ===== ریست کامل ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #0a0f1a;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* ===== کانتینر Canvas ===== */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 80%, #0f1a2a, #060a12);
+            cursor: crosshair;
+        }
+
+        /* ===== کنترل‌های صفحه کلید ===== */
+        .controls-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            padding: 12px 24px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.08);
+            color: #7a8a8a;
+            font-size: 0.75rem;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            letter-spacing: 1px;
+            text-align: center;
+            direction: ltr;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+        .controls-hint kbd {
+            background: rgba(255, 215, 0, 0.08);
+            padding: 2px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 215, 0, 0.06);
+            color: #c8b898;
+            font-family: inherit;
+            font-size: 0.7rem;
+            margin: 0 2px;
+        }
+        .controls-hint .sep {
+            color: #3a4a4a;
+            margin: 0 6px;
+        }
+
+        /* ===== واکنش‌گرایی ===== */
+        @media (max-width: 768px) {
+            .controls-hint {
+                font-size: 0.6rem;
+                padding: 8px 14px;
+                bottom: 15px;
+                max-width: 90%;
+            }
+            .controls-hint kbd {
+                font-size: 0.55rem;
+                padding: 1px 6px;
+            }
+        }
+        @media (max-width: 480px) {
+            .controls-hint {
+                font-size: 0.5rem;
+                padding: 6px 12px;
+                bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== Canvas برای رندر شخصیت ===== -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- ===== راهنمای کلیدها ===== -->
+    <div class="controls-hint">
+        <kbd>W</kbd> راه رفتن
+        <span class="sep">|</span>
+        <kbd>R</kbd> دویدن
+        <span class="sep">|</span>
+        <kbd>D</kbd> رقص
+        <span class="sep">|</span>
+        <kbd>F</kbd> پشتک
+        <span class="sep">|</span>
+        <kbd>J</kbd> پرش
+        <span class="sep">|</span>
+        <kbd>Space</kbd> سلام
+        <span class="sep">|</span>
+        <kbd>C</kbd> ماشین
+    </div>
+
+    <script>
+        // ================================================================
+        //  🕵️ AGENT – شخصیت کارتونی جاسوسی
+        //  تمام کد در یک فایل یکپارچه
+        // ================================================================
+
+        // ================================================================
+        //  1.  موتور انیمیشن
+        // ================================================================
+        class AnimationEngine {
+            constructor() {
+                this.animations = {};
+                this.current = "idle";
+                this.frame = 0;
+                this.elapsed = 0;
+                this.speed = 1;
+                this.loop = true;
+                this.finished = false;
+            }
+            add(name, frames, fps = 12, loop = true) {
+                this.animations[name] = { name, frames, fps, loop };
+            }
+            play(name) {
+                if (!this.animations[name]) return;
+                if (this.current === name) return;
+                this.current = name;
+                this.frame = 0;
+                this.elapsed = 0;
+                this.finished = false;
+                this.loop = this.animations[name].loop;
+            }
+            update(dt) {
+                const anim = this.animations[this.current];
+                if (!anim) return;
+                this.elapsed += dt;
+                const frameTime = 1000 / (anim.fps * this.speed);
+                if (this.elapsed >= frameTime) {
+                    this.elapsed = 0;
+                    this.frame++;
+                    if (this.frame >= anim.frames) {
+                        if (anim.loop) {
+                            this.frame = 0;
+                        } else {
+                            this.frame = anim.frames - 1;
+                            this.finished = true;
+                        }
+                    }
+                }
+            }
+            getFrame() { return this.frame; }
+            isFinished() { return this.finished; }
+        }
+
+        // ================================================================
+        //  2.  تعریف انیمیشن‌ها
+        // ================================================================
+        const animator = new AnimationEngine();
+        animator.add("idle", 8, 6, true);
+        animator.add("walk", 12, 14, true);
+        animator.add("run", 10, 22, true);
+        animator.add("dance", 20, 18, true);
+        animator.add("flip", 24, 30, false);
+        animator.add("wave", 16, 12, false);
+        animator.add("jump", 10, 16, false);
+
+        // ================================================================
+        //  3.  صف انیمیشن
+        // ================================================================
+        class AnimationQueue {
+            constructor(animator) {
+                this.animator = animator;
+                this.queue = [];
+            }
+            push(name) { this.queue.push(name); }
+            update() {
+                if (this.animator.isFinished()) {
+                    if (this.queue.length > 0) {
+                        this.animator.play(this.queue.shift());
+                    } else {
+                        this.animator.play("idle");
+                    }
+                }
+            }
+        }
+        const animationQueue = new AnimationQueue(animator);
+
+        // ================================================================
+        //  4.  کلاس ذره
+        // ================================================================
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = -Math.random() * 3;
+                this.life = 1;
+                this.size = 2 + Math.random() * 4;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.05;
+                this.life -= 0.015;
+            }
+            draw(ctx) {
+                if (this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.7;
+                ctx.fillStyle = "#ffd54f";
+                ctx.shadowColor = "#ffd54f";
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // ================================================================
+        //  5.  کلاس ماشین
+        // ================================================================
+        class SpyCar {
+            constructor() {
+                this.x = -350;
+                this.y = 0;
+                this.speed = 8;
+                this.active = false;
+            }
+            start() {
+                this.x = -350;
+                this.active = true;
+            }
+            update(canvas) {
+                if (!this.active) return;
+                this.x += this.speed;
+                if (this.x > canvas.width + 350) {
+                    this.active = false;
+                }
+            }
+            draw(ctx, y) {
+                if (!this.active) return;
+                ctx.save();
+                ctx.translate(this.x, y);
+
+                // سایه
+                ctx.fillStyle = "rgba(0,0,0,0.2)";
+                ctx.filter = "blur(8px)";
+                ctx.fillRect(-70, 14, 140, 10);
+                ctx.filter = "none";
+
+                // بدنه
+                const g = ctx.createLinearGradient(0, -20, 0, 10);
+                g.addColorStop(0, "#2a2a2a");
+                g.addColorStop(1, "#0a0a0a");
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.roundRect(-70, -18, 140, 28, 6);
+                ctx.fill();
+
+                // سقف
+                ctx.fillStyle = "#1f1f1f";
+                ctx.beginPath();
+                ctx.roundRect(-35, -38, 70, 20, 4);
+                ctx.fill();
+
+                // شیشه جلو
+                ctx.fillStyle = "rgba(60,160,220,0.15)";
+                ctx.beginPath();
+                ctx.roundRect(-28, -35, 56, 16, 2);
+                ctx.fill();
+
+                // چراغ‌های جلو
+                ctx.fillStyle = "#ffd54f";
+                ctx.shadowColor = "#ffd54f";
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(-65, -4, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(65, -4, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // چرخ‌ها
+                ctx.fillStyle = "#0a0a0a";
+                ctx.beginPath();
+                ctx.arc(-45, 12, 11, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(45, 12, 11, 0, Math.PI * 2);
+                ctx.fill();
+
+                // رینگ چرخ
+                ctx.strokeStyle = "rgba(255,255,255,0.05)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(-45, 12, 6, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.arc(45, 12, 6, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        const spyCar = new SpyCar();
+
+        // ================================================================
+        //  6.  کلاس اصلی شخصیت (Agent)
+        // ================================================================
+        class Agent {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext("2d");
+
+                // موقعیت
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 160;
+                this.scale = 1;
+                this.width = 80;
+                this.height = 140;
+
+                // حرکت
+                this.speed = 2.5;
+                this.direction = 1;
+                this.vx = this.speed;
+                this.vy = 0;
+                this.gravity = 0.45;
+                this.ground = this.y;
+
+                // وضعیت
+                this.state = "idle";
+                this.onGround = true;
+
+                // تایمرها
+                this.time = 0;
+                this.blinkTimer = 0;
+                this.actionTimer = 0;
+                this.nextAction = 3000;
+
+                // انیمیشن
+                this.animator = animator;
+
+                // اعضای بدن
+                this.headAngle = 0;
+                this.bodyAngle = 0;
+                this.leftArm = 0;
+                this.rightArm = 0;
+                this.leftForeArm = 0;
+                this.rightForeArm = 0;
+                this.leftLeg = 0;
+                this.rightLeg = 0;
+                this.leftFoot = 0;
+                this.rightFoot = 0;
+                this.eyeScale = 1;
+                this.rotationSpeed = 0;
+
+                // ذرات
+                this.particles = [];
+
+                // ماشین
+                this.inCar = false;
+                this.carX = -300;
+            }
+
+            // ----- متدهای اصلی -----
+            setState(name) {
+                this.state = name;
+                this.animator.play(name);
+                if (name === "flip") {
+                    this.onGround = false;
+                    this.vy = -11;
+                    this.rotationSpeed = 0.45;
+                }
+                if (name === "jump") {
+                    this.jump();
+                }
+            }
+
+            flip() { this.direction *= -1; }
+
+            jump() {
+                if (!this.onGround) return;
+                this.onGround = false;
+                this.vy = -10;
+                this.setState("jump");
+            }
+
+            // ----- بروزرسانی -----
+            update(dt) {
+                this.time += dt;
+                this.updateBlink(dt);
+                const frame = this.animator.getFrame();
+
+                this.updateArms(frame);
+                this.updateLegs(frame);
+                this.updateMovement();
+
+                // چرخش پشتک
+                if (this.state === "flip") {
+                    this.bodyAngle += this.rotationSpeed;
+                    if (this.onGround) {
+                        this.bodyAngle = 0;
+                        if (this.state === "flip") this.setState("idle");
+                    }
+                }
+
+                this.updateAI(dt);
+                this.updateParticles();
+                this.animator.update(dt);
+                animationQueue.update();
+            }
+
+            // ----- حرکت -----
+            updateMovement() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (!this.onGround) {
+                    this.vy += this.gravity;
+                }
+
+                if (this.y >= this.ground) {
+                    this.y = this.ground;
+                    this.vy = 0;
+                    this.onGround = true;
+                    if (this.state === "jump") this.setState("idle");
+                }
+
+                const pad = 70;
+                if (this.x < pad) {
+                    this.x = pad;
+                    this.direction = 1;
+                    this.vx = Math.abs(this.speed);
+                }
+                if (this.x > this.canvas.width - pad) {
+                    this.x = this.canvas.width - pad;
+                    this.direction = -1;
+                    this.vx = -Math.abs(this.speed);
+                }
+            }
+
+            // ----- هوش مصنوعی -----
+            updateAI(dt) {
+                this.actionTimer += dt;
+                if (this.actionTimer < this.nextAction) return;
+                this.actionTimer = 0;
+                this.nextAction = this.random(2500, 7000);
+                this.chooseRandomAction();
+            }
+
+            chooseRandomAction() {
+                const actions = ["idle", "walk", "run", "dance", "wave", "jump", "flip"];
+                let action;
+                do {
+                    action = actions[Math.floor(Math.random() * actions.length)];
+                } while (action === this.state);
+                this.setState(action);
+
+                switch (action) {
+                    case "walk":
+                        this.speed = 2;
+                        this.vx = this.direction * this.speed;
+                        break;
+                    case "run":
+                        this.speed = 5;
+                        this.vx = this.direction * this.speed;
+                        break;
+                    case "idle":
+                        this.speed = 0;
+                        this.vx = 0;
+                        break;
+                    case "jump":
+                        this.jump();
+                        break;
+                    case "wave":
+                    case "dance":
+                        this.speed = 0;
+                        this.vx = 0;
+                        break;
+                    case "flip":
+                        this.setState("flip");
+                        break;
+                }
+            }
+
+            random(min, max) {
+                return Math.floor(Math.random() * (max - min) + min);
+            }
+
+            // ----- نگاه به ماوس -----
+            lookAt(mx, my) {
+                const dx = mx - this.x;
+                const dy = my - (this.y - 120);
+                this.headAngle = Math.atan2(dy, dx) * 0.3;
+            }
+
+            // ----- پلک زدن -----
+            updateBlink(dt) {
+                this.blinkTimer += dt;
+                if (this.blinkTimer > 4000) {
+                    this.eyeScale = 0.05;
+                }
+                if (this.blinkTimer > 4100) {
+                    this.eyeScale = 1;
+                    this.blinkTimer = 0;
+                }
+            }
+
+            // ----- ذرات -----
+            spawnParticles(count = 8) {
+                for (let i = 0; i < count; i++) {
+                    this.particles.push(new Particle(this.x, this.y - 120));
+                }
+            }
+
+            updateParticles() {
+                this.particles = this.particles.filter(p => {
+                    p.update();
+                    return p.life > 0;
+                });
+            }
+
+            // ================================================================
+            //  رسم (DRAW)
+            // ================================================================
+            draw() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+
+                ctx.scale(this.scale, this.scale);
+
+                this.drawShadow();
+                this.drawLegs();
+                this.drawBody();
+                this.drawArms();
+                this.drawHead();
+                this.drawEffects();
+
+                ctx.restore();
+            }
+
+            // ----- سایه -----
+            drawShadow() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.fillStyle = "rgba(0,0,0,0.15)";
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 38, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // ----- پاها -----
+            drawLegs() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(0, -10);
+                this.drawLeg(-13, this.leftLeg, this.leftFoot);
+                this.drawLeg(13, this.rightLeg, this.rightFoot);
+                ctx.restore();
+            }
+
+            drawLeg(x, hipAngle, footAngle) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, 0);
+
+                ctx.rotate(hipAngle);
+                ctx.lineWidth = 16;
+                ctx.lineCap = "round";
+                ctx.strokeStyle = "#1b1b1b";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 42);
+                ctx.stroke();
+
+                ctx.translate(0, 42);
+                ctx.fillStyle = "#222";
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.rotate(-hipAngle * 0.55);
+                ctx.lineWidth = 14;
+                ctx.strokeStyle = "#151515";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 38);
+                ctx.stroke();
+
+                ctx.translate(0, 38);
+                ctx.rotate(footAngle);
+                this.drawShoe();
+
+                ctx.restore();
+            }
+
+            drawShoe() {
+                const ctx = this.ctx;
+                ctx.save();
+                const g = ctx.createLinearGradient(-10, 0, 18, 8);
+                g.addColorStop(0, "#444");
+                g.addColorStop(0.4, "#111");
+                g.addColorStop(1, "#000");
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.moveTo(-6, -2);
+                ctx.quadraticCurveTo(8, -4, 18, 2);
+                ctx.quadraticCurveTo(20, 8, 12, 10);
+                ctx.lineTo(-8, 10);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = "rgba(255,255,255,0.1)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(2, 2);
+                ctx.lineTo(14, 3);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // ----- بدن -----
+            drawBody() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(0, -62);
+                ctx.rotate(this.bodyAngle);
+
+                // کت
+                const jacket = ctx.createLinearGradient(0, -40, 0, 55);
+                jacket.addColorStop(0, "#3a3a3a");
+                jacket.addColorStop(0.5, "#1d1d1d");
+                jacket.addColorStop(1, "#0b0b0b");
+                ctx.fillStyle = jacket;
+                this.roundRect(ctx, -28, -30, 56, 78, 12);
+                ctx.fill();
+
+                // سایه داخلی
+                ctx.fillStyle = "rgba(255,255,255,0.03)";
+                this.roundRect(ctx, -24, -26, 48, 70, 10);
+                ctx.fill();
+
+                // پیراهن
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.moveTo(-9, -28);
+                ctx.lineTo(9, -28);
+                ctx.lineTo(13, 40);
+                ctx.lineTo(-13, 40);
+                ctx.closePath();
+                ctx.fill();
+
+                // یقه پیراهن
+                ctx.fillStyle = "#ececec";
+                ctx.beginPath();
+                ctx.moveTo(-14, -28);
+                ctx.lineTo(0, -6);
+                ctx.lineTo(-4, -28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(14, -28);
+                ctx.lineTo(0, -6);
+                ctx.lineTo(4, -28);
+                ctx.closePath();
+                ctx.fill();
+
+                // پاپیون
+                ctx.fillStyle = "#111";
+                ctx.beginPath();
+                ctx.ellipse(-6, -15, 7, 5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(6, -15, 7, 5, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, -15, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // یقه کت
+                ctx.fillStyle = "#161616";
+                ctx.beginPath();
+                ctx.moveTo(-20, -30);
+                ctx.lineTo(-5, 6);
+                ctx.lineTo(-2, -30);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(20, -30);
+                ctx.lineTo(5, 6);
+                ctx.lineTo(2, -30);
+                ctx.closePath();
+                ctx.fill();
+
+                // دکمه‌ها
+                ctx.fillStyle = "#d7b04c";
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, 5 + i * 15, 2.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // جیب‌ها
+                ctx.strokeStyle = "rgba(255,255,255,0.15)";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-22, 18);
+                ctx.lineTo(-10, 18);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(10, 18);
+                ctx.lineTo(22, 18);
+                ctx.stroke();
+
+                // دستمال جیب
+                ctx.fillStyle = "#fafafa";
+                ctx.beginPath();
+                ctx.moveTo(14, -2);
+                ctx.lineTo(18, -10);
+                ctx.lineTo(22, -2);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            // ----- دست‌ها -----
+            drawArms() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(0, -88);
+                this.drawArm(-24, -5, this.leftArm, this.leftForeArm, false);
+                this.drawArm(24, -5, this.rightArm, this.rightForeArm, true);
+                ctx.restore();
+            }
+
+            drawArm(x, y, shoulder, elbow, gadget = false) {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(x, y);
+
+                ctx.rotate(shoulder);
+                ctx.lineCap = "round";
+                ctx.lineWidth = 14;
+                ctx.strokeStyle = "#111";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 30);
+                ctx.stroke();
+
+                ctx.translate(0, 30);
+                ctx.fillStyle = "#1d1d1d";
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.rotate(elbow);
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = "#181818";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 26);
+                ctx.stroke();
+
+                ctx.translate(0, 26);
+                ctx.fillStyle = "#ffd7be";
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // انگشت
+                ctx.beginPath();
+                ctx.arc(6, -2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (gadget) {
+                    this.drawSpyGadget();
+                }
+
+                ctx.restore();
+            }
+
+            drawSpyGadget() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(14, 0);
+
+                // بدنه
+                ctx.fillStyle = "#2b2b2b";
+                this.roundRect(ctx, -3, -3, 20, 6, 3);
+                ctx.fill();
+
+                // نوک
+                ctx.fillStyle = "#c7c7c7";
+                ctx.fillRect(17, -1, 7, 2);
+
+                // چراغ
+                ctx.shadowColor = "#4fc3ff";
+                ctx.shadowBlur = 15;
+                ctx.fillStyle = "#4fc3ff";
+                ctx.beginPath();
+                ctx.arc(10, 0, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+
+            // ----- سر -----
+            drawHead() {
+                const ctx = this.ctx;
+                ctx.save();
+                ctx.translate(0, -120);
+                ctx.rotate(this.headAngle);
+
+                // مو
+                ctx.fillStyle = "#4b2d18";
+                ctx.beginPath();
+                ctx.arc(0, -6, 32, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(-22, -2, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(22, -2, 9, 0, Math.PI * 2);
+                ctx.fill();
+
+                // صورت
+                ctx.fillStyle = "#ffd7be";
+                ctx.beginPath();
+                ctx.ellipse(0, 12, 30, 34, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // گوش
+                ctx.fillStyle = "#ffd7be";
+                ctx.beginPath();
+                ctx.ellipse(-31, 12, 4, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(31, 12, 4, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // ابرو
+                ctx.strokeStyle = "#3b2413";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-18, 2);
+                ctx.lineTo(-8, 0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(18, 2);
+                ctx.stroke();
+
+                // چشم چپ
+                ctx.save();
+                ctx.translate(-12, 10);
+                ctx.scale(1, this.eyeScale);
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#2d7cff";
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.beginPath();
+                ctx.arc(-1, -1, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // چشم راست
+                ctx.save();
+                ctx.translate(12, 10);
+                ctx.scale(1, this.eyeScale);
+                ctx.fillStyle = "white";
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#2d7cff";
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#fff";
+                ctx.beginPath();
+                ctx.arc(-1, -1, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                // بینی
+                ctx.strokeStyle = "#e2b89a";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 16);
+                ctx.lineTo(-1, 24);
+                ctx.stroke();
+
+                // دهان
+                ctx.strokeStyle = "#a54b4b";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 30, 6, 0, Math.PI);
+                ctx.stroke();
+
+                // لپ
+                ctx.fillStyle = "rgba(255,120,120,0.15)";
+                ctx.beginPath();
+                ctx.arc(-18, 24, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(18, 24, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            // ----- ذرات روی Canvas -----
+            drawEffects() {
+                const ctx = this.ctx;
+                this.particles.forEach(p => p.draw(ctx));
+            }
+
+            // ================================================================
+            //  بروزرسانی اعضای بدن بر اساس انیمیشن
+            // ================================================================
+            updateArms(frame) {
+                switch (this.state) {
+                    case "idle":
+                        this.leftArm = Math.sin(frame * 0.08) * 0.08;
+                        this.rightArm = -Math.sin(frame * 0.08) * 0.08;
+                        this.leftForeArm = 0;
+                        this.rightForeArm = 0;
+                        break;
+                    case "walk":
+                        this.leftArm = Math.sin(frame * 0.22) * 0.65;
+                        this.rightArm = -Math.sin(frame * 0.22) * 0.65;
+                        this.leftForeArm = 0.18;
+                        this.rightForeArm = -0.18;
+                        break;
+                    case "run":
+                        this.leftArm = Math.sin(frame * 0.45) * 1.1;
+                        this.rightArm = -Math.sin(frame * 0.45) * 1.1;
+                        this.leftForeArm = 0.45;
+                        this.rightForeArm = -0.45;
+                        break;
+                    case "wave":
+                        this.leftArm = 0;
+                        this.leftForeArm = 0;
+                        this.rightArm = -1.4;
+                        this.rightForeArm = Math.sin(frame * 0.5) * 0.8;
+                        break;
+                    case "jump":
+                        this.leftArm = -0.6;
+                        this.rightArm = 0.6;
+                        this.leftForeArm = 0.3;
+                        this.rightForeArm = -0.3;
+                        break;
+                    case "dance":
+                        this.leftArm = Math.sin(frame * 0.35);
+                        this.rightArm = Math.cos(frame * 0.35);
+                        this.leftForeArm = Math.sin(frame * 0.25);
+                        this.rightForeArm = Math.cos(frame * 0.25);
+                        break;
+                    case "flip":
+                        this.leftArm = Math.sin(frame * 0.55) * 1.2;
+                        this.rightArm = Math.cos(frame * 0.55) * 1.2;
+                        this.leftForeArm = Math.sin(frame * 0.45) * 0.5;
+                        this.rightForeArm = Math.cos(frame * 0.45) * 0.5;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            updateLegs(frame) {
+                switch (this.state) {
+                    case "idle":
+                        this.leftLeg = Math.sin(frame * 0.06) * 0.03;
+                        this.rightLeg = -Math.sin(frame * 0.06) * 0.03;
+                        this.leftFoot = 0;
+                        this.rightFoot = 0;
+                        break;
+                    case "walk":
+                        this.leftLeg = Math.sin(frame * 0.18) * 0.65;
+                        this.rightLeg = -Math.sin(frame * 0.18) * 0.65;
+                        this.leftFoot = -Math.sin(frame * 0.18) * 0.18;
+                        this.rightFoot = Math.sin(frame * 0.18) * 0.18;
+                        break;
+                    case "run":
+                        this.leftLeg = Math.sin(frame * 0.42) * 1.05;
+                        this.rightLeg = -Math.sin(frame * 0.42) * 1.05;
+                        this.leftFoot = -Math.sin(frame * 0.42) * 0.35;
+                        this.rightFoot = Math.sin(frame * 0.42) * 0.35;
+                        break;
+                    case "jump":
+                        this.leftLeg = -0.55;
+                        this.rightLeg = 0.55;
+                        this.leftFoot = 0.25;
+                        this.rightFoot = -0.25;
+                        break;
+                    case "flip":
+                        this.leftLeg = Math.sin(frame * 0.55);
+                        this.rightLeg = Math.cos(frame * 0.55);
+                        this.leftFoot = Math.sin(frame * 0.55) * 0.5;
+                        this.rightFoot = Math.cos(frame * 0.55) * 0.5;
+                        break;
+                    case "dance":
+                        this.leftLeg = Math.sin(frame * 0.25) * 0.7;
+                        this.rightLeg = Math.cos(frame * 0.25) * 0.7;
+                        this.leftFoot = Math.cos(frame * 0.25) * 0.25;
+                        this.rightFoot = Math.sin(frame * 0.25) * 0.25;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            // ================================================================
+            //  تابع کمکی roundRect
+            // ================================================================
+            roundRect(ctx, x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+            }
+        }
+
+        // ================================================================
+        //  7.  راه‌اندازی و Game Loop
+        // ================================================================
+
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            if (window.agent) {
+                window.agent.ground = canvas.height - 160;
+                window.agent.y = Math.min(window.agent.y, window.agent.ground);
+            }
+        }
+        window.addEventListener("resize", resize);
+        resize();
+
+        // ایجاد شخصیت
+        window.agent = new Agent(canvas);
+        window.agent.ground = canvas.height - 160;
+
+        // ================================================================
+        //  8.  حلقه اصلی
+        // ================================================================
+
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = Math.min(now - lastTime, 30);
+            lastTime = now;
+
+            // پاک کردن صفحه
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // پس‌زمینه
+            const bg = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height * 0.8, 100,
+                canvas.width / 2, canvas.height * 0.8, canvas.height * 0.9
+            );
+            bg.addColorStop(0, "#0f1a2a");
+            bg.addColorStop(1, "#060a12");
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // خطوط راهنمای رادار
+            ctx.strokeStyle = "rgba(255,215,0,0.02)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 6; i++) {
+                const radius = 80 + i * 60;
+                ctx.beginPath();
+                ctx.arc(canvas.width / 2, canvas.height * 0.85, radius, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // ماشین
+            spyCar.update(canvas);
+            spyCar.draw(ctx, canvas.height - 70);
+
+            // شخصیت
+            const agent = window.agent;
+            agent.update(dt);
+            agent.updateParticles();
+
+            // ذرات هنگام دویدن
+            if (agent.state === "run" && Math.random() < 0.2) {
+                agent.spawnParticles(2);
+            }
+            if (agent.state === "flip" && Math.random() < 0.15) {
+                agent.spawnParticles(5);
+            }
+
+            agent.draw();
+
+            // اطلاعات وضعیت (اختیاری)
+            ctx.fillStyle = "rgba(255,255,255,0.03)";
+            ctx.font = "10px monospace";
+            ctx.fillText(`state: ${agent.state} | frame: ${agent.animator.getFrame()}`, 16, 30);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ================================================================
+        //  9.  رویدادهای ماوس و کیبورد
+        // ================================================================
+
+        // حرکت ماوس – چرخش سر
+        document.addEventListener("mousemove", (e) => {
+            if (window.agent) {
+                window.agent.lookAt(e.clientX, e.clientY);
+            }
+        });
+
+        // کلیک – پرش
+        document.addEventListener("click", () => {
+            if (window.agent) {
+                window.agent.jump();
+            }
+        });
+
+        // کلیدهای کیبورد
+        document.addEventListener("keydown", (e) => {
+            const key = e.key.toLowerCase();
+            const agent = window.agent;
+            if (!agent) return;
+
+            switch (key) {
+                case "w":
+                    agent.setState("walk");
+                    agent.speed = 2;
+                    agent.vx = agent.direction * agent.speed;
+                    e.preventDefault();
+                    break;
+                case "r":
+                    agent.setState("run");
+                    agent.speed = 5;
+                    agent.vx = agent.direction * agent.speed;
+                    e.preventDefault();
+                    break;
+                case "d":
+                    agent.setState("dance");
+                    agent.speed = 0;
+                    agent.vx = 0;
+                    e.preventDefault();
+                    break;
+                case "f":
+                    agent.setState("flip");
+                    e.preventDefault();
+                    break;
+                case "j":
+                    agent.jump();
+                    e.preventDefault();
+                    break;
+                case " ":
+                    agent.setState("wave");
+                    agent.speed = 0;
+                    agent.vx = 0;
+                    e.preventDefault();
+                    break;
+                case "c":
+                    spyCar.start();
+                    e.preventDefault();
+                    break;
+            }
+        });
+
+        // ================================================================
+        //  10. شروع
+        // ================================================================
+
+        requestAnimationFrame(gameLoop);
+
+        // پشتیبانی از roundRect در مرورگرهای قدیمی
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w / 2) r = w / 2;
+                if (r > h / 2) r = h / 2;
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                return this;
+            };
+        }
+
+        console.log("🕵️ مأمور جاسوسی آماده است!");
+        console.log("⌨️ کلیدها: W=راه رفتن, R=دویدن, D=رقص, F=پشتک, J=پرش, Space=سلام, C=ماشین");
+        console.log("🖱️ حرکت ماوس = چرخش سر");
+        console.log("🖱️ کلیک = پرش");
+    </script>
+</body>
+</html>

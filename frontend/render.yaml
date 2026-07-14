@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: minouta-frontend
+    env: docker
+    repo: https://github.com/your-username/minouta-frontend
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        sync: false

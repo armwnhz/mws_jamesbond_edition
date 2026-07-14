@@ -1,0 +1,3646 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🕵️ Minouta Spy Scraper</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11">
+    </script>
+    <style>
+        /* ============================================================
+           RESET & BASE – تم جیمز باندی
+           ============================================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+        body {
+            font-family: 'Share Tech Mono', 'Segoe UI', monospace;
+            min-height: 100vh;
+            background: #0e1419;
+            /* آبی نفتی تیره */
+            color: #c8d8e0;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ---- لایه‌های پس‌زمینه با انیمیشن رادار و اسکن ---- */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                /* خطوط اسکن مورب با زاویه */
+                repeating-linear-gradient(45deg,
+                    rgba(200, 180, 140, 0.02) 0px,
+                    rgba(200, 180, 140, 0.02) 2px,
+                    transparent 2px,
+                    transparent 12px),
+                repeating-linear-gradient(-45deg,
+                    rgba(200, 180, 140, 0.015) 0px,
+                    rgba(200, 180, 140, 0.015) 1px,
+                    transparent 1px,
+                    transparent 14px),
+                /* محوهای طلایی-آبی */
+                radial-gradient(circle at 20% 30%, rgba(200, 180, 140, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(60, 140, 200, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: scanMove 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes scanMove {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            100% {
+                transform: translate(6px, 6px) rotate(0.5deg);
+            }
+        }
+
+        /* ---- رادار چرخان ---- */
+        .radar-ring {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            border: 1px solid rgba(200, 180, 140, 0.06);
+        }
+        .radar-ring:nth-child(1) {
+            width: 500px;
+            height: 500px;
+            top: -150px;
+            right: -100px;
+            animation: rotateRadar 20s linear infinite;
+            border-color: rgba(200, 180, 140, 0.04);
+        }
+        .radar-ring:nth-child(2) {
+            width: 350px;
+            height: 350px;
+            bottom: -50px;
+            left: -50px;
+            animation: rotateRadar 25s linear infinite reverse;
+            border-color: rgba(60, 140, 200, 0.04);
+        }
+        .radar-ring:nth-child(3) {
+            width: 200px;
+            height: 200px;
+            top: 40%;
+            left: 60%;
+            animation: rotateRadar 15s linear infinite;
+            border-color: rgba(200, 180, 140, 0.05);
+            border-width: 2px;
+        }
+        .radar-ring:nth-child(4) {
+            width: 120px;
+            height: 120px;
+            bottom: 25%;
+            right: 5%;
+            animation: rotateRadar 18s linear infinite reverse;
+            border-color: rgba(200, 180, 140, 0.06);
+        }
+        .radar-ring:nth-child(5) {
+            width: 70px;
+            height: 70px;
+            top: 15%;
+            left: 8%;
+            animation: rotateRadar 12s linear infinite;
+            border-color: rgba(200, 180, 140, 0.08);
+        }
+
+        /* خط متقاطع رادار (کراس‌هیر) */
+        .radar-ring::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 40%;
+            background: rgba(200, 180, 140, 0.04);
+            transform: translate(-50%, -50%) rotate(45deg);
+            border-radius: 2px;
+        }
+        .radar-ring:nth-child(3)::after {
+            height: 60%;
+            background: rgba(200, 180, 140, 0.06);
+        }
+
+        @keyframes rotateRadar {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+            50% {
+                transform: rotate(180deg) scale(1.05);
+            }
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        /* ---- ذرات کدگونه با حرکت مارپیچ ---- */
+        .particle {
+            position: fixed;
+            color: rgba(200, 180, 140, 0.10);
+            font-size: 11px;
+            font-family: 'Share Tech Mono', monospace;
+            pointer-events: none;
+            z-index: 0;
+            white-space: nowrap;
+            animation: spiralParticle 25s linear infinite;
+            letter-spacing: 2px;
+        }
+        .particle:nth-child(6) {
+            top: 6%;
+            left: 3%;
+            animation-duration: 22s;
+        }
+        .particle:nth-child(7) {
+            bottom: 10%;
+            right: 5%;
+            animation-duration: 28s;
+            animation-delay: 4s;
+        }
+        .particle:nth-child(8) {
+            top: 40%;
+            left: 55%;
+            animation-duration: 30s;
+            animation-delay: 6s;
+        }
+        .particle:nth-child(9) {
+            bottom: 30%;
+            right: 12%;
+            animation-duration: 20s;
+            animation-delay: 2s;
+        }
+        .particle:nth-child(10) {
+            top: 20%;
+            right: 18%;
+            animation-duration: 24s;
+            animation-delay: 8s;
+        }
+        .particle:nth-child(11) {
+            bottom: 6%;
+            left: 22%;
+            animation-duration: 26s;
+            animation-delay: 3s;
+        }
+        .particle:nth-child(12) {
+            top: 70%;
+            left: 4%;
+            animation-duration: 18s;
+            animation-delay: 5s;
+        }
+
+        @keyframes spiralParticle {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+                opacity: 0.05;
+            }
+            25% {
+                transform: translate(40px, -30px) rotate(90deg) scale(1.2);
+                opacity: 0.15;
+            }
+            50% {
+                transform: translate(-20px, 50px) rotate(180deg) scale(0.8);
+                opacity: 0.08;
+            }
+            75% {
+                transform: translate(30px, -20px) rotate(270deg) scale(1.1);
+                opacity: 0.12;
+            }
+            100% {
+                transform: translate(0, 0) rotate(360deg) scale(1);
+                opacity: 0.05;
+            }
+        }
+
+        /* ---- نقطه‌های ریز رادار (شبکه) ---- */
+        .dot-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background-image:
+                radial-gradient(circle, rgba(200, 180, 140, 0.04) 1px, transparent 1px);
+            background-size: 30px 30px;
+            animation: dotMove 15s linear infinite;
+        }
+        @keyframes dotMove {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(25px, 25px);
+            }
+        }
+
+        /* ---- خط چشمک‌زن (مثل فیلم‌های جاسوسی) ---- */
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            background: repeating-linear-gradient(0deg,
+                    transparent 0px,
+                    transparent 3px,
+                    rgba(0, 0, 0, 0.01) 3px,
+                    rgba(0, 0, 0, 0.01) 4px);
+            animation: scanlineMove 4s linear infinite;
+        }
+        @keyframes scanlineMove {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        /* ---- کانتینر اصلی ---- */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ============================================================
+               HEADER – استایل جیمز باندی
+               ============================================================ */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 16px 28px;
+            background: rgba(14, 20, 25, 0.8);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(200, 180, 140, 0.10);
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 5%;
+            width: 90%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(200, 180, 140, 0.15), transparent);
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 400;
+            letter-spacing: 4px;
+            color: #c8d8e0;
+        }
+        .header h1 span {
+            color: #d4c8a8;
+            text-shadow: 0 0 30px rgba(200, 180, 140, 0.08);
+        }
+        .header h1 small {
+            font-size: 0.65rem;
+            color: #7a8a8a;
+            letter-spacing: 6px;
+            display: block;
+            font-weight: 300;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .user-info .username {
+            color: #9ab0b8;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+        .user-info .username::before {
+            content: '◆ ';
+            color: #d4c8a8;
+            font-size: 0.7rem;
+        }
+
+        /* ============================================================
+               دکمه‌ها – با افکت طلایی
+               ============================================================ */
+        .btn {
+            padding: 10px 24px;
+            border: 1px solid rgba(200, 180, 140, 0.15);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 400;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(200, 180, 140, 0.03);
+            color: #c8d8e0;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(200, 180, 140, 0.03), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        .btn:hover::after {
+            opacity: 1;
+        }
+        .btn:hover {
+            background: rgba(200, 180, 140, 0.06);
+            border-color: rgba(200, 180, 140, 0.25);
+            box-shadow: 0 0 30px rgba(200, 180, 140, 0.03);
+            transform: translateY(-1px);
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-primary {
+            background: rgba(200, 180, 140, 0.06);
+            border-color: rgba(200, 180, 140, 0.2);
+            color: #d4c8a8;
+        }
+        .btn-primary:hover {
+            background: rgba(200, 180, 140, 0.12);
+            box-shadow: 0 0 40px rgba(200, 180, 140, 0.06);
+        }
+        .btn-danger {
+            border-color: rgba(200, 80, 80, 0.15);
+            color: #c08080;
+        }
+        .btn-danger:hover {
+            border-color: rgba(200, 80, 80, 0.3);
+            background: rgba(200, 80, 80, 0.05);
+        }
+        .btn-success {
+            border-color: rgba(160, 200, 140, 0.15);
+            color: #a0c0a0;
+        }
+        .btn-success:hover {
+            border-color: rgba(160, 200, 140, 0.3);
+            background: rgba(160, 200, 140, 0.05);
+        }
+        .btn-outline {
+            padding: 6px 16px;
+            border: 1px solid rgba(200, 180, 140, 0.08);
+            border-radius: 6px;
+            background: transparent;
+            color: #8aa0a8;
+            font-family: inherit;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+        .btn-outline:hover {
+            border-color: rgba(200, 180, 140, 0.2);
+            color: #b8c8d0;
+            background: rgba(200, 180, 140, 0.02);
+        }
+        .btn-outline.danger:hover {
+            border-color: #c08080;
+            color: #c08080;
+        }
+        .btn-outline.success:hover {
+            border-color: #a0c0a0;
+            color: #a0c0a0;
+        }
+
+        /* ============================================================
+               تب‌ها – با نور طلایی
+               ============================================================ */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 10px 22px;
+            background: rgba(14, 20, 25, 0.6);
+            border: 1px solid rgba(200, 180, 140, 0.06);
+            border-radius: 8px;
+            color: #7a8a8a;
+            font-size: 0.85rem;
+            font-weight: 400;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+            backdrop-filter: blur(4px);
+        }
+        .tab-btn:hover {
+            background: rgba(200, 180, 140, 0.03);
+            border-color: rgba(200, 180, 140, 0.12);
+            color: #b0c0c8;
+        }
+        .tab-btn.active {
+            background: rgba(200, 180, 140, 0.06);
+            border-color: rgba(200, 180, 140, 0.2);
+            color: #d4c8a8;
+            box-shadow: 0 0 30px rgba(200, 180, 140, 0.03);
+        }
+
+        /* ============================================================
+               محتوای تب‌ها – شیشه‌ای با حاشیه طلایی
+               ============================================================ */
+        .tab-content {
+            display: none;
+            background: rgba(14, 20, 25, 0.65);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 28px;
+            border: 1px solid rgba(200, 180, 140, 0.05);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.5s ease;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* ============================================================
+               فرم‌ها
+               ============================================================ */
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 300;
+            margin-bottom: 6px;
+            color: #8aa0a8;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="password"],
+        .form-group input[type="search"],
+        .form-group input[type="date"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(200, 180, 140, 0.06);
+            border-radius: 8px;
+            color: #c8d8e0;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .form-group input:focus {
+            border-color: rgba(200, 180, 140, 0.15);
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: 0 0 30px rgba(200, 180, 140, 0.02);
+        }
+        .form-group input::placeholder {
+            color: #4a5a5a;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin: 10px 0 18px 0;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: rgba(200, 180, 140, 0.02);
+            border-radius: 6px;
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 300;
+            font-size: 0.85rem;
+            color: #8aa0a8;
+        }
+        .checkbox-item:hover {
+            background: rgba(200, 180, 140, 0.04);
+            border-color: rgba(200, 180, 140, 0.08);
+        }
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #d4c8a8;
+            cursor: pointer;
+        }
+
+        /* ============================================================
+               جدول نتایج
+               ============================================================ */
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 14px;
+        }
+        .result-table th {
+            background: rgba(200, 180, 140, 0.03);
+            padding: 10px 14px;
+            text-align: right;
+            font-weight: 300;
+            color: #7a8a8a;
+            border-bottom: 1px solid rgba(200, 180, 140, 0.04);
+            letter-spacing: 1px;
+            font-size: 0.8rem;
+        }
+        .result-table td {
+            padding: 8px 14px;
+            border-bottom: 1px solid rgba(200, 180, 140, 0.02);
+            color: #b8c8d0;
+            font-size: 0.9rem;
+        }
+        .result-table tr:hover td {
+            background: rgba(200, 180, 140, 0.02);
+        }
+        .type-cell {
+            color: #b8b0a0;
+            font-weight: 300;
+        }
+        .value-cell {
+            font-family: 'Share Tech Mono', monospace;
+            color: #c0c8b8;
+        }
+
+        /* ============================================================
+               آیتم‌های تاریخچه
+               ============================================================ */
+        .history-list {
+            margin-top: 14px;
+        }
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(200, 180, 140, 0.02);
+            border-radius: 8px;
+            margin-bottom: 6px;
+            border: 1px solid rgba(200, 180, 140, 0.03);
+            transition: all 0.3s ease;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .history-item:hover {
+            background: rgba(200, 180, 140, 0.04);
+            border-color: rgba(200, 180, 140, 0.06);
+        }
+        .history-item .info {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+        }
+        .history-item .info span {
+            color: #6a8a8a;
+        }
+        .history-item .info .url {
+            color: #b0b8a8;
+            font-weight: 400;
+        }
+        .history-item .badge {
+            background: rgba(200, 180, 140, 0.03);
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: #8aa0a8;
+            cursor: pointer;
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .history-item .badge:hover {
+            background: rgba(200, 180, 140, 0.06);
+            border-color: rgba(200, 180, 140, 0.08);
+        }
+        .history-item .badge.danger {
+            color: #c08080;
+            border-color: rgba(200, 80, 80, 0.04);
+        }
+        .history-item .badge.danger:hover {
+            background: rgba(200, 80, 80, 0.04);
+            border-color: rgba(200, 80, 80, 0.08);
+        }
+        .history-item .badge.success {
+            color: #a0b8a0;
+            border-color: rgba(160, 200, 140, 0.04);
+        }
+        .history-item .badge.success:hover {
+            background: rgba(160, 200, 140, 0.04);
+            border-color: rgba(160, 200, 140, 0.08);
+        }
+        .history-item.deleted {
+            opacity: 0.4;
+            border-color: rgba(200, 80, 80, 0.03);
+        }
+
+        /* ============================================================
+               صفحه‌بندی
+               ============================================================ */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 14px;
+            align-items: center;
+        }
+        .pagination button {
+            padding: 5px 14px;
+            background: rgba(200, 180, 140, 0.02);
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            border-radius: 6px;
+            color: #6a8a8a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: rgba(200, 180, 140, 0.04);
+            border-color: rgba(200, 180, 140, 0.08);
+            color: #9ab0b8;
+        }
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .pagination span {
+            color: #6a8a8a;
+            font-size: 0.85rem;
+        }
+
+        /* ============================================================
+               آمار
+               ============================================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: rgba(200, 180, 140, 0.02);
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            background: rgba(200, 180, 140, 0.04);
+            border-color: rgba(200, 180, 140, 0.06);
+        }
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 400;
+            color: #d4c8a8;
+            text-shadow: 0 0 30px rgba(200, 180, 140, 0.04);
+        }
+        .stat-card .label {
+            color: #5a7a7a;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            letter-spacing: 1px;
+        }
+
+        .chart-container {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 14px;
+            border: 1px solid rgba(200, 180, 140, 0.04);
+        }
+
+        /* ============================================================
+               فیلترها
+               ============================================================ */
+        .filter-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: rgba(200, 180, 140, 0.02);
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+            color: #6a8a8a;
+            font-weight: 300;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+        .filter-toggle:hover {
+            background: rgba(200, 180, 140, 0.04);
+        }
+        .filter-container {
+            display: none;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            margin-top: 4px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .filter-container.open {
+            display: grid;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .filter-group label {
+            color: #5a7a7a;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        .filter-group input[type="text"],
+        .filter-group input[type="date"] {
+            padding: 6px 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(200, 180, 140, 0.04);
+            border-radius: 6px;
+            color: #b8c8d0;
+            font-size: 0.85rem;
+            outline: none;
+            font-family: inherit;
+        }
+        .filter-group input:focus {
+            border-color: rgba(200, 180, 140, 0.08);
+        }
+        .filter-group.checkbox {
+            flex-direction: row;
+            align-items: center;
+            gap: 6px;
+        }
+        .filter-group.checkbox input[type="checkbox"] {
+            accent-color: #d4c8a8;
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+        }
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            grid-column: 1 / -1;
+        }
+
+        /* ============================================================
+               دراپ‌داون
+               ============================================================ */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: rgba(10, 16, 20, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(200, 180, 140, 0.06);
+            border-radius: 8px;
+            padding: 6px 0;
+            min-width: 180px;
+            z-index: 100;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+        }
+        .dropdown:hover .dropdown-menu {
+            display: block;
+        }
+        .dropdown-menu button {
+            display: block;
+            width: 100%;
+            padding: 8px 18px;
+            border: none;
+            background: transparent;
+            color: #6a8a8a;
+            font-family: inherit;
+            font-size: 0.8rem;
+            text-align: right;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .dropdown-menu button:hover {
+            background: rgba(200, 180, 140, 0.03);
+            color: #b0c0c8;
+        }
+
+        /* ============================================================
+               مودال احراز هویت
+               ============================================================ */
+        .auth-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .auth-modal-overlay.open {
+            display: flex;
+        }
+        .auth-modal {
+            background: rgba(10, 16, 20, 0.9);
+            backdrop-filter: blur(20px);
+            padding: 36px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 90%;
+            border: 1px solid rgba(200, 180, 140, 0.06);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+        .auth-modal h2 {
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #b8c8d0;
+            margin-bottom: 20px;
+            font-size: 1.4rem;
+        }
+        .auth-modal h2 span {
+            color: #d4c8a8;
+        }
+
+        /* ============================================================
+               توست (اعلان)
+               ============================================================ */
+        #toastContainer {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 380px;
+        }
+        .toast {
+            padding: 12px 18px;
+            border-radius: 8px;
+            border-left: 3px solid #d4c8a8;
+            background: rgba(10, 16, 20, 0.9);
+            backdrop-filter: blur(12px);
+            color: #b8c8d0;
+            font-size: 0.85rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            animation: toastIn 0.3s ease;
+            font-family: inherit;
+        }
+        .toast.error {
+            border-left-color: #c08080;
+        }
+        .toast.success {
+            border-left-color: #a0c0a0;
+        }
+        .toast.warning {
+            border-left-color: #c8b080;
+        }
+        @keyframes toastIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes toastOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        /* ============================================================
+               اسپینر
+               ============================================================ */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #5a7a7a;
+        }
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 2px solid rgba(200, 180, 140, 0.04);
+            border-top-color: #d4c8a8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ============================================================
+               اسکرول
+               ============================================================ */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(200, 180, 140, 0.08);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(200, 180, 140, 0.15);
+        }
+
+        /* ============================================================
+               واکنش‌گرایی
+               ============================================================ */
+        @media (max-width: 700px) {
+            .container {
+                padding: 0 4px;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 14px 16px;
+            }
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            .tab-btn {
+                padding: 8px 14px;
+                font-size: 0.75rem;
+            }
+            .checkbox-group {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .history-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .filter-container {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .auth-modal {
+                padding: 24px;
+            }
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* ============================================================
+               کلاس‌های کمکی
+               ============================================================ */
+        .text-center {
+            text-align: center;
+        }
+        .mt-1 {
+            margin-top: 0.5rem;
+        }
+        .mb-1 {
+            margin-bottom: 0.5rem;
+        }
+        .flex {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .gap-1 {
+            gap: 6px;
+        }
+        .op-5 {
+            opacity: 0.5;
+        }
+        .text-muted {
+            color: #5a7a7a;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== المان‌های تزئینی ===== -->
+    <div class="scanline"></div>
+    <div class="dot-grid"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+    <div class="radar-ring"></div>
+
+    <div class="particle" style="top:6%;left:3%;">01001110 01001001 01001110 01001010 01000001</div>
+    <div class="particle" style="bottom:10%;right:5%;">01010011 01000101 01000011 01010010 01000101 01010100</div>
+    <div class="particle" style="top:40%;left:55%;">01000100 01000001 01010100 01000001 00100000 01001111 01010110 01000101 01010010</div>
+    <div class="particle" style="bottom:30%;right:12%;">01001001 01001110 01010100 01000101 01001100</div>
+    <div class="particle" style="top:20%;right:18%;">01001101 01001001 01001110 01001111 01010101 01010100 01000001</div>
+    <div class="particle" style="bottom:6%;left:22%;">01010011 01001100 01000101 01000101 01010000 01001001 01001110 01000111</div>
+    <div class="particle" style="top:70%;left:4%;">01000011 01001111 01000100 01000101</div>
+    <div class="particle" style="bottom:40%;right:3%;">01001101 01001001 01010011 01010011 01001001 01001111 01001110</div>
+
+    <!-- ================================================================
+    برنامه اصلی
+    ================================================================ -->
+    <div class="container" id="app">
+
+        <!-- ===== HEADER ===== -->
+        <header class="header">
+            <h1>
+                🕵️ <span>MINOUTA</span>
+                <small>◆ S P Y   S C R A P E R ◆</small>
+            </h1>
+            <div class="user-info" id="userInfo">
+                <span class="username" id="usernameDisplay">👤 مهمان</span>
+                <button class="btn-outline" id="btnChangePassword" style="display:none;">🔑 تغییر رمز</button>
+                <button class="btn-outline danger" id="btnLogout" style="display:none;">🚪 خروج</button>
+                <button class="btn btn-primary" id="btnLogin">🔓 ورود</button>
+            </div>
+        </header>
+
+        <!-- ===== تب‌ها ===== -->
+        <div id="tabsContainer" style="display:none;">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="scrape">🎯 اسکرپ</button>
+                <button class="tab-btn" data-tab="history">📋 تاریخچه</button>
+                <button class="tab-btn" data-tab="trash">🗑️ سطل</button>
+                <button class="tab-btn" data-tab="stats">📊 آمار</button>
+            </div>
+        </div>
+
+        <!-- ===== تب اسکرپ ===== -->
+        <div id="tab-scrape" class="tab-content active">
+            <form id="scrapeForm">
+                <div class="form-group">
+                    <label>🌐 هدف (URL)</label>
+                    <input type="text" id="urlInput" placeholder="مثلاً: hamzehalizadeh.ir" required />
+                </div>
+                <div class="form-group">
+                    <label>🔍 داده‌های قابل استخراج</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-item"><input type="checkbox" id="chkMobile" checked /> 📱 موبایل</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chkLandline" checked /> 🏠 ثابت</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chkEmail" checked /> ✉️ ایمیل</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chkInstagram" checked /> 📸 اینستاگرام</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chkYoutube" checked /> ▶️ یوتیوب</label>
+                        <label class="checkbox-item"><input type="checkbox" id="chkLinks" /> 🔗 لینک (کراول)</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="submitScrape">🚀 اجرای مأموریت</button>
+            </form>
+            <div id="scrapeResult" style="margin-top:18px;"></div>
+        </div>
+
+        <!-- ===== تب تاریخچه ===== -->
+        <div id="tab-history" class="tab-content">
+            <div class="flex-between" style="margin-bottom:12px;">
+                <h2 style="color:#6a8a8a; font-weight:300; font-size:1.1rem; letter-spacing:2px;">📋 گزارش‌های قبلی</h2>
+                <div class="flex">
+                    <button class="btn-outline" id="refreshHistory">🔄 بروزرسانی</button>
+                    <button class="btn-outline" id="exportCSV">📥 CSV</button>
+                    <button class="btn-outline" id="exportJSON">📥 JSON</button>
+                    <button class="btn-outline" id="exportTXT">📥 TXT</button>
+                    <button class="btn-outline" id="exportZIP">📥 ZIP</button>
+                    <div class="dropdown">
+                        <button class="btn-outline">⏱️ حذف ▾</button>
+                        <div class="dropdown-menu">
+                            <button data-range="recent">🆕 ۱۰ مورد اخیر</button>
+                            <button data-range="hour">🕐 یک ساعت گذشته</button>
+                            <button data-range="week">📅 هفته گذشته</button>
+                        </div>
+                    </div>
+                    <button class="btn-outline danger" id="deleteAllHistory">🗑️ حذف همه</button>
+                </div>
+            </div>
+
+            <div class="filter-toggle" id="filterToggle">
+                <span>⚙️ فیلترهای پیشرفته</span>
+                <span id="filterArrow">▼</span>
+            </div>
+            <div class="filter-container" id="filterContainer">
+                <div class="filter-group">
+                    <label>🔍 URL</label>
+                    <input type="text" id="filterUrl" placeholder="جستجو..." />
+                </div>
+                <div class="filter-group">
+                    <label>📅 از تاریخ</label>
+                    <input type="date" id="filterStartDate" />
+                </div>
+                <div class="filter-group">
+                    <label>📅 تا تاریخ</label>
+                    <input type="date" id="filterEndDate" />
+                </div>
+                <div class="filter-group checkbox">
+                    <label><input type="checkbox" id="filterHasMobile" /> 📱 دارای موبایل</label>
+                </div>
+                <div class="filter-group checkbox">
+                    <label><input type="checkbox" id="filterHasEmail" /> ✉️ دارای ایمیل</label>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn-outline" id="applyFilters">✅ اعمال</button>
+                    <button class="btn-outline" id="clearFilters">❌ پاک کردن</button>
+                </div>
+            </div>
+
+            <div id="historyList" class="history-list"><div class="loading"><div class="spinner"></div>در حال بارگذاری...</div></div>
+            <div class="pagination" id="pagination">
+                <button id="prevPage" disabled>قبلی</button>
+                <span id="pageInfo">صفحه ۱</span>
+                <button id="nextPage">بعدی</button>
+            </div>
+            <div id="historyDetail" style="margin-top:16px; display:none;">
+                <h3 style="color:#6a8a8a; font-weight:300; letter-spacing:1px; font-size:1rem;">📄 جزئیات عملیات</h3>
+                <div id="historyDetailContent"></div>
+            </div>
+        </div>
+
+        <!-- ===== تب سطل زباله ===== -->
+        <div id="tab-trash" class="tab-content">
+            <div class="flex-between" style="margin-bottom:12px;">
+                <h2 style="color:#6a8a8a; font-weight:300; font-size:1.1rem; letter-spacing:2px;">🗑️ سطل زباله</h2>
+                <div class="flex">
+                    <button class="btn-outline" id="refreshTrash">🔄 بروزرسانی</button>
+                    <button class="btn-outline success" id="restoreAllTrash">♻️ بازیابی همه</button>
+                    <button class="btn-outline danger" id="emptyTrash">🗑️ پاک‌سازی نهایی</button>
+                </div>
+            </div>
+            <div id="trashList" class="history-list"><div class="loading"><div class="spinner"></div>در حال بارگذاری...</div></div>
+        </div>
+
+        <!-- ===== تب آمار ===== -->
+        <div id="tab-stats" class="tab-content">
+            <h2 style="color:#6a8a8a; font-weight:300; letter-spacing:2px; margin-bottom:16px;">📊 آمار عملیات</h2>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><div class="number" id="statScrapes">0</div><div class="label">تعداد اسکرپ</div></div>
+                <div class="stat-card"><div class="number" id="statMobiles">0</div><div class="label">📱 موبایل</div></div>
+                <div class="stat-card"><div class="number" id="statEmails">0</div><div class="label">✉️ ایمیل</div></div>
+                <div class="stat-card"><div class="number" id="statInstagram">0</div><div class="label">📸 اینستاگرام</div></div>
+                <div class="stat-card"><div class="number" id="statYoutube">0</div><div class="label">▶️ یوتیوب</div></div>
+            </div>
+            <div class="chart-container">
+                <canvas id="statsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- ===== مودال احراز هویت ===== -->
+        <div class="auth-modal-overlay" id="authModal">
+            <div class="auth-modal">
+                <h2 id="authModalTitle">🔐 <span>ورود</span></h2>
+                <form id="authForm">
+                    <div class="form-group">
+                        <label>👤 نام کاربری</label>
+                        <input type="text" id="authUsername" placeholder="نام کاربری" required />
+                    </div>
+                    <div class="form-group" id="emailGroup" style="display:none;">
+                        <label>📧 ایمیل</label>
+                        <input type="email" id="authEmail" placeholder="ایمیل" />
+                    </div>
+                    <div class="form-group">
+                        <label>🔒 رمز عبور</label>
+                        <input type="password" id="authPassword" placeholder="رمز عبور" required minlength="6" />
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="authSubmit" style="width:100%;">🚀 ورود</button>
+                </form>
+                <p style="text-align:center; margin-top:12px; color:#5a7a7a; font-size:0.8rem;">
+                    <span id="authToggleText">حساب ندارید؟</span>
+                    <a href="#" id="authToggleLink" style="color:#d4c8a8; text-decoration:none;">ثبت نام کنید</a>
+                </p>
+                <button class="btn-outline" id="authClose" style="width:100%; margin-top:8px;">بستن</button>
+            </div>
+        </div>
+
+        <!-- ===== توست‌ها ===== -->
+        <div id="toastContainer"></div>
+
+    </div>
+
+    <!-- ================================================================
+    جاوااسکریپت + افکت صوتی جیمز باند
+    ================================================================ -->
+    <script>
+        // ================================================================
+        //  تنظیمات
+        // ================================================================
+        const API_BASE = 'http://localhost:8000';
+        
+        const API_BASE = 'https://minouta-backend.onrender.com'; // آدرس موقت، بعداً با آدرس واقعی جایگزین می‌شود
+
+        // ================================================================
+        //  افکت صوتی جیمز باند (۳ نت معروف)
+        // ================================================================
+        function playBondTheme() {
+            try {
+                const ctx = new(window.AudioContext || window.webkitAudioContext)();
+                const notes = [261.63, 329.63, 392.00]; // C4, E4, G4
+                const now = ctx.currentTime;
+                notes.forEach((freq, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.03, now + i * 0.15);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(now + i * 0.15);
+                    osc.stop(now + i * 0.15 + 0.3);
+                });
+                // ریتم ضربه‌ای اضافی برای حس جیمز باند
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'square';
+                osc2.frequency.value = 130.81; // C3
+                gain2.gain.setValueAtTime(0.02, now + 0.45);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.45);
+                osc2.stop(now + 0.55);
+            } catch (e) {
+                // در صورت عدم پشتیبانی Web Audio، خطا را نادیده بگیر
+            }
+        }
+
+        // ================================================================
+        //  وضعیت
+        // ================================================================
+        let currentUser = null;
+        let currentPage = 1;
+        let totalPages = 1;
+        let filters = {};
+        let historyItems = [];
+        let trashItems = [];
+        let statsChart = null;
+        let authMode = 'login';
+
+        // ================================================================
+        //  توابع کمکی
+        // ================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + type;
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+            // پخش افکت صوتی برای برخی رویدادها
+            if (type === 'success') playBondTheme();
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleString('fa-IR');
+        }
+
+        function normalizeUrl(url) {
+            url = url.trim();
+            if (!/^https?:\/\//i.test(url)) return 'https://' + url;
+            return url;
+        }
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        }
+
+        // ================================================================
+        //  احراز هویت
+        // ================================================================
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_BASE}/auth/me`, { credentials: 'include' });
+                if (res.ok) {
+                    const user = await res.json();
+                    currentUser = user;
+                    updateUIForLoggedIn();
+                    return user;
+                } else {
+                    currentUser = null;
+                    updateUIForLoggedOut();
+                    return null;
+                }
+            } catch {
+                currentUser = null;
+                updateUIForLoggedOut();
+                return null;
+            }
+        }
+
+        function updateUIForLoggedIn() {
+            document.getElementById('usernameDisplay').textContent = '👤 ' + currentUser.username;
+            document.getElementById('btnLogin').style.display = 'none';
+            document.getElementById('btnLogout').style.display = 'inline-block';
+            document.getElementById('btnChangePassword').style.display = 'inline-block';
+            document.getElementById('tabsContainer').style.display = 'block';
+            showTab('scrape');
+            loadHistory();
+            loadStats();
+            loadTrash();
+            playBondTheme(); // پخش اهنگ هنگام ورود
+        }
+
+        function updateUIForLoggedOut() {
+            document.getElementById('usernameDisplay').textContent = '👤 مهمان';
+            document.getElementById('btnLogin').style.display = 'inline-block';
+            document.getElementById('btnLogout').style.display = 'none';
+            document.getElementById('btnChangePassword').style.display = 'none';
+            document.getElementById('tabsContainer').style.display = 'none';
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-scrape').classList.remove('active');
+            openAuthModal('login');
+        }
+
+        async function login(username, password) {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ username, password })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'ورود ناموفق');
+            }
+            const data = await res.json();
+            currentUser = data;
+            updateUIForLoggedIn();
+            showToast('✅ ورود موفق', 'success');
+            return data;
+        }
+
+        async function logout() {
+            await fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include' });
+            deleteCookie('access_token');
+            currentUser = null;
+            updateUIForLoggedOut();
+            showToast('🚪 خارج شدید', 'info');
+        }
+
+        async function register(username, email, password) {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, email, password })
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.detail || 'ثبت نام ناموفق');
+            }
+            return await res.json();
+        }
+
+        // ================================================================
+        //  مودال احراز هویت
+        // ================================================================
+        function openAuthModal(mode = 'login') {
+            authMode = mode;
+            const modal = document.getElementById('authModal');
+            modal.classList.add('open');
+            const title = document.getElementById('authModalTitle');
+            const submitBtn = document.getElementById('authSubmit');
+            const toggleText = document.getElementById('authToggleText');
+            const toggleLink = document.getElementById('authToggleLink');
+            const emailGroup = document.getElementById('emailGroup');
+
+            if (mode === 'login') {
+                title.innerHTML = '🔐 <span>ورود</span>';
+                submitBtn.textContent = '🚀 ورود';
+                toggleText.textContent = 'حساب ندارید؟';
+                toggleLink.textContent = 'ثبت نام کنید';
+                emailGroup.style.display = 'none';
+                document.getElementById('authEmail').removeAttribute('required');
+            } else {
+                title.innerHTML = '📝 <span>ثبت نام</span>';
+                submitBtn.textContent = '🚀 ثبت نام';
+                toggleText.textContent = 'قبلاً ثبت نام کرده‌اید؟';
+                toggleLink.textContent = 'وارد شوید';
+                emailGroup.style.display = 'block';
+                document.getElementById('authEmail').setAttribute('required', 'required');
+            }
+            document.getElementById('authUsername').value = '';
+            document.getElementById('authEmail').value = '';
+            document.getElementById('authPassword').value = '';
+        }
+
+        document.getElementById('authToggleLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            const newMode = authMode === 'login' ? 'register' : 'login';
+            openAuthModal(newMode);
+        });
+
+        document.getElementById('authClose').addEventListener('click', () => {
+            document.getElementById('authModal').classList.remove('open');
+        });
+
+        document.getElementById('authForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('authUsername').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            const email = document.getElementById('authEmail').value.trim();
+
+            if (!username || !password) {
+                showToast('❌ لطفاً همه فیلدها را پر کنید', 'error');
+                return;
+            }
+            if (authMode === 'register' && password.length < 6) {
+                showToast('❌ رمز عبور باید حداقل ۶ کاراکتر باشد', 'error');
+                return;
+            }
+
+            try {
+                if (authMode === 'login') {
+                    await login(username, password);
+                    document.getElementById('authModal').classList.remove('open');
+                } else {
+                    await register(username, email, password);
+                    showToast('✅ ثبت نام موفق! اکنون وارد شوید', 'success');
+                    openAuthModal('login');
+                }
+            } catch (err) {
+                showToast('❌ ' + err.message, 'error');
+            }
+        });
+
+        // ================================================================
+        //  تب‌ها
+        // ================================================================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                showTab(btn.dataset.tab);
+            });
+        });
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'history') loadHistory(currentPage);
+            else if (tab === 'trash') loadTrash();
+            else if (tab === 'stats') loadStats();
+        }
+
+        // ================================================================
+        //  اسکرپ
+        // ================================================================
+        document.getElementById('scrapeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = normalizeUrl(document.getElementById('urlInput').value.trim());
+            if (!url) {
+                showToast('❌ لطفاً آدرس را وارد کنید', 'error');
+                return;
+            }
+            const payload = {
+                urls: [url],
+                extract_mobile: document.getElementById('chkMobile').checked,
+                extract_landline: document.getElementById('chkLandline').checked,
+                extract_email: document.getElementById('chkEmail').checked,
+                extract_links: document.getElementById('chkLinks').checked,
+                extract_instagram: document.getElementById('chkInstagram').checked,
+                extract_youtube: document.getElementById('chkYoutube').checked,
+                save_history: true,
+                depth: document.getElementById('chkLinks').checked ? 1 : 0
+            };
+
+            const btn = document.getElementById('submitScrape');
+            btn.disabled = true;
+            btn.textContent = '⏳ در حال اجرا...';
+            document.getElementById('scrapeResult').innerHTML = '';
+
+            try {
+                const res = await fetch(`${API_BASE}/scrape`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'خطا در اسکرپ');
+                }
+                const data = await res.json();
+                if (data.results && data.results[0]) {
+                    displayScrapeResult(data.results[0]);
+                    showToast('✅ مأموریت موفق!', 'success');
+                } else {
+                    showToast('❌ نتیجه‌ای دریافت نشد', 'error');
+                }
+            } catch (err) {
+                showToast('❌ ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 اجرای مأموریت';
+            }
+        });
+
+        function displayScrapeResult(result) {
+            const container = document.getElementById('scrapeResult');
+            const categories = [
+                { key: 'mobiles', label: '📱 موبایل' },
+                { key: 'landlines', label: '🏠 ثابت' },
+                { key: 'emails', label: '✉️ ایمیل' },
+                { key: 'instagram', label: '📸 اینستاگرام' },
+                { key: 'youtube', label: '▶️ یوتیوب' }
+            ];
+            let rows = [];
+            categories.forEach(cat => {
+                const vals = result[cat.key] || [];
+                if (vals.length === 0) rows.push({ type: cat.label, value: '—' });
+                else vals.forEach(v => rows.push({ type: cat.label, value: v }));
+            });
+            let html =
+                `<h3 style="color:#6a8a8a; font-weight:300; letter-spacing:1px; font-size:1rem; margin-top:10px;">📄 نتایج عملیات</h3>
+                           <table class="result-table"><thead><tr><th>نوع</th><th>مقدار</th></tr></thead><tbody>`;
+            rows.forEach(r => {
+                html += `<tr><td class="type-cell">${r.type}</td><td class="value-cell">${r.value}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+            container.innerHTML = html;
+        }
+
+        // ================================================================
+        //  تاریخچه
+        // ================================================================
+        async function loadHistory(page = 1) {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '<div class="loading"><div class="spinner"></div>در حال بارگذاری...</div>';
+            try {
+                const params = new URLSearchParams();
+                params.append('page', page);
+                params.append('limit', 10);
+                params.append('show_deleted', false);
+                Object.keys(filters).forEach(key => {
+                    const val = filters[key];
+                    if (key === 'has_mobile' || key === 'has_email') {
+                        if (val === true) params.append(key, 'true');
+                    } else if (val !== undefined && val !== null && val !== '') {
+                        params.append(key, val);
+                    }
+                });
+
+                const res = await fetch(`${API_BASE}/history?${params}`, { credentials: 'include' });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'خطا');
+                }
+                const data = await res.json();
+                historyItems = data.items || [];
+                totalPages = data.pages || 1;
+                currentPage = page;
+                renderHistoryItems(historyItems);
+                updatePagination();
+            } catch (err) {
+                list.innerHTML = `<div class="text-center" style="color:#c08080;">❌ ${err.message}</div>`;
+            }
+        }
+
+        function renderHistoryItems(items) {
+            const list = document.getElementById('historyList');
+            if (!items || items.length === 0) {
+                list.innerHTML = '<div class="text-center" style="padding:2rem; color:#5a7a7a;">هیچ گزارشی ثبت نشده است.</div>';
+                return;
+            }
+            let html = '';
+            items.forEach(item => {
+                const mob = item.mobiles?.length || 0;
+                const email = item.emails?.length || 0;
+                const insta = item.instagram?.length || 0;
+                const yt = item.youtube?.length || 0;
+                const time = formatDate(item.timestamp);
+                html += `
+                            <div class="history-item">
+                                <div class="info">
+                                    <span class="url">${item.url}</span>
+                                    <span>🕒 ${time}</span>
+                                    <span>📱 ${mob}</span>
+                                    <span>✉️ ${email}</span>
+                                    <span>📸 ${insta}</span>
+                                    <span>▶️ ${yt}</span>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="badge" onclick="viewHistoryDetail(${item.id})">مشاهده</button>
+                                    <button class="badge danger" onclick="deleteHistoryItem(${item.id}, false)">🗑️</button>
+                                </div>
+                            </div>
+                        `;
+            });
+            list.innerHTML = html;
+        }
+
+        function updatePagination() {
+            document.getElementById('pageInfo').textContent = `صفحه ${currentPage} از ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage <= 1;
+            document.getElementById('nextPage').disabled = currentPage >= totalPages;
+        }
+
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) loadHistory(currentPage - 1);
+        });
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage < totalPages) loadHistory(currentPage + 1);
+        });
+        document.getElementById('refreshHistory').addEventListener('click', () => loadHistory(currentPage));
+
+        // ===== جزئیات تاریخچه =====
+        window.viewHistoryDetail = async function(id) {
+            const container = document.getElementById('historyDetail');
+            const content = document.getElementById('historyDetailContent');
+            container.style.display = 'block';
+            content.innerHTML = '<div class="loading"><div class="spinner"></div>بارگذاری...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/history/${id}`, { credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                const item = await res.json();
+                const cats = [
+                    { key: 'mobiles', label: '📱 موبایل' },
+                    { key: 'landlines', label: '🏠 ثابت' },
+                    { key: 'emails', label: '✉️ ایمیل' },
+                    { key: 'instagram', label: '📸 اینستاگرام' },
+                    { key: 'youtube', label: '▶️ یوتیوب' }
+                ];
+                let html =
+                    `<div style="margin-bottom:8px; color:#6a8a8a;"><strong>${item.url}</strong> — 🕒 ${formatDate(item.timestamp)}</div>`;
+                html +=
+                    `<table class="result-table"><thead><tr><th>نوع</th><th>مقدار</th></tr></thead><tbody>`;
+                let found = false;
+                cats.forEach(cat => {
+                    const vals = item[cat.key] || [];
+                    if (vals.length === 0) html +=
+                        `<tr><td class="type-cell">${cat.label}</td><td class="value-cell">—</td></tr>`;
+                    else { found = true;
+                        vals.forEach(v => html +=
+                            `<tr><td class="type-cell">${cat.label}</td><td class="value-cell">${v}</td></tr>`); }
+                });
+                if (!found) html +=
+                    `<tr><td colspan="2" style="text-align:center; color:#5a7a7a;">داده‌ای یافت نشد</td></tr>`;
+                html += `</tbody></table>`;
+                content.innerHTML = html;
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+                content.innerHTML = `<div style="color:#c08080;">❌ ${err.message}</div>`;
+            }
+        };
+
+        // ===== حذف آیتم تاریخچه =====
+        window.deleteHistoryItem = async function(id, permanent = false) {
+            const confirm = await Swal.fire({
+                title: 'حذف آیتم',
+                text: permanent ? 'آیا این آیتم را برای همیشه حذف می‌کنید؟' :
+                    'آیا این آیتم را به سطل زباله منتقل می‌کنید؟',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'بله',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0'
+            });
+            if (!confirm.isConfirmed) return;
+            try {
+                const res = await fetch(`${API_BASE}/history/${id}?permanent=${permanent}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('خطا');
+                showToast('✅ آیتم حذف شد.', 'success');
+                historyItems = historyItems.filter(item => item.id !== id);
+                renderHistoryItems(historyItems);
+                document.getElementById('historyDetail').style.display = 'none';
+            } catch (err) {
+                showToast('❌ خطا در حذف', 'error');
+            }
+        };
+
+        // ===== فیلترها =====
+        document.getElementById('filterToggle').addEventListener('click', () => {
+            const container = document.getElementById('filterContainer');
+            const arrow = document.getElementById('filterArrow');
+            container.classList.toggle('open');
+            arrow.textContent = container.classList.contains('open') ? '▲' : '▼';
+        });
+
+        document.getElementById('applyFilters').addEventListener('click', () => {
+            filters = {};
+            const url = document.getElementById('filterUrl').value.trim();
+            if (url) filters.url = url;
+            const start = document.getElementById('filterStartDate').value;
+            if (start) filters.start_date = start;
+            const end = document.getElementById('filterEndDate').value;
+            if (end) filters.end_date = end;
+            if (document.getElementById('filterHasMobile').checked) filters.has_mobile = true;
+            if (document.getElementById('filterHasEmail').checked) filters.has_email = true;
+            loadHistory(1);
+            showToast('✅ فیلترها اعمال شدند.', 'success');
+        });
+
+        document.getElementById('clearFilters').addEventListener('click', () => {
+            document.getElementById('filterUrl').value = '';
+            document.getElementById('filterStartDate').value = '';
+            document.getElementById('filterEndDate').value = '';
+            document.getElementById('filterHasMobile').checked = false;
+            document.getElementById('filterHasEmail').checked = false;
+            filters = {};
+            loadHistory(1);
+            showToast('✅ فیلترها پاک شدند.', 'success');
+        });
+
+        // ===== حذف همه =====
+        document.getElementById('deleteAllHistory').addEventListener('click', async () => {
+            const confirm = await Swal.fire({
+                title: 'حذف همه',
+                text: 'همه‌ی آیتم‌ها به سطل زباله منتقل می‌شوند.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'بله',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0'
+            });
+            if (!confirm.isConfirmed) return;
+            try {
+                const res = await fetch(`${API_BASE}/history/delete-all`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                showToast('✅ همه‌ی آیتم‌ها به سطل زباله منتقل شدند.', 'success');
+                loadHistory(1);
+            } catch (err) {
+                showToast('❌ خطا', 'error');
+            }
+        });
+
+        // ===== حذف گروهی بر اساس زمان =====
+        document.querySelectorAll('.dropdown-menu button[data-range]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const range = btn.dataset.range;
+                const confirm = await Swal.fire({
+                    title: 'حذف بر اساس زمان',
+                    text: `آیا اسکرپ‌های ${range === 'recent' ? 'اخیر' : range === 'hour' ? 'یک ساعت گذشته' : 'هفته گذشته'} حذف شوند؟`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'بله',
+                    cancelButtonText: 'لغو',
+                    background: '#0e1419',
+                    color: '#c8d8e0'
+                });
+                if (!confirm.isConfirmed) return;
+                try {
+                    const res = await fetch(`${API_BASE}/history/bulk-delete?time_range=${range}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    if (!res.ok) throw new Error('خطا');
+                    showToast('✅ آیتم‌های مورد نظر حذف شدند.', 'success');
+                    loadHistory(1);
+                } catch (err) {
+                    showToast('❌ خطا', 'error');
+                }
+            });
+        });
+
+        // ===== خروجی‌ها =====
+        async function exportHistory(format) {
+            try {
+                const res = await fetch(`${API_BASE}/history/export?format=${format}`, {
+                    credentials: 'include',
+                    headers: { 'Accept': format === 'json' ? 'application/json' : format === 'csv' ? 'text/csv' :
+                            'text/plain' }
+                });
+                if (!res.ok) throw new Error('خطا');
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `history.${format === 'json' ? 'json' : format === 'csv' ? 'csv' : 'txt'}`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showToast(`✅ خروجی ${format.toUpperCase()} دانلود شد.`, 'success');
+            } catch (err) {
+                showToast('❌ خطا در خروجی', 'error');
+            }
+        }
+
+        document.getElementById('exportCSV').addEventListener('click', () => exportHistory('csv'));
+        document.getElementById('exportJSON').addEventListener('click', () => exportHistory('json'));
+        document.getElementById('exportTXT').addEventListener('click', () => exportHistory('txt'));
+
+        document.getElementById('exportZIP').addEventListener('click', async () => {
+            try {
+                const res = await fetch(`${API_BASE}/history/export/zip`, { credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                const blob = await res.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'history_export.zip';
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showToast('✅ خروجی ZIP دانلود شد.', 'success');
+            } catch (err) {
+                showToast('❌ خطا در خروجی ZIP', 'error');
+            }
+        });
+
+        // ================================================================
+        //  سطل زباله
+        // ================================================================
+        async function loadTrash() {
+            const list = document.getElementById('trashList');
+            list.innerHTML = '<div class="loading"><div class="spinner"></div>در حال بارگذاری...</div>';
+            try {
+                const res = await fetch(`${API_BASE}/history?page=1&limit=100&show_deleted=true`, { credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                const data = await res.json();
+                trashItems = data.items || [];
+                renderTrashItems(trashItems);
+            } catch (err) {
+                list.innerHTML = `<div class="text-center" style="color:#c08080;">❌ ${err.message}</div>`;
+            }
+        }
+
+        function renderTrashItems(items) {
+            const list = document.getElementById('trashList');
+            if (!items || items.length === 0) {
+                list.innerHTML = '<div class="text-center" style="padding:2rem; color:#5a7a7a;">سطل زباله خالی است.</div>';
+                return;
+            }
+            let html = '';
+            items.forEach(item => {
+                const mob = item.mobiles?.length || 0;
+                const email = item.emails?.length || 0;
+                const time = formatDate(item.timestamp);
+                const deleted = item.deleted_at ? formatDate(item.deleted_at) : 'نامشخص';
+                html += `
+                            <div class="history-item deleted">
+                                <div class="info">
+                                    <span class="url">${item.url}</span>
+                                    <span>🕒 ${time}</span>
+                                    <span>🗑️ حذف: ${deleted}</span>
+                                    <span>📱 ${mob}</span>
+                                    <span>✉️ ${email}</span>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="badge success" onclick="restoreTrashItem(${item.id})">♻️ بازیابی</button>
+                                    <button class="badge danger" onclick="deleteHistoryItem(${item.id}, true)">🗑️ پاک‌سازی</button>
+                                </div>
+                            </div>
+                        `;
+            });
+            list.innerHTML = html;
+        }
+
+        window.restoreTrashItem = async function(id) {
+            try {
+                const res = await fetch(`${API_BASE}/history/${id}/restore`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error('خطا');
+                showToast('✅ آیتم بازیابی شد.', 'success');
+                loadTrash();
+            } catch (err) {
+                showToast('❌ خطا در بازیابی', 'error');
+            }
+        };
+
+        document.getElementById('refreshTrash').addEventListener('click', loadTrash);
+
+        document.getElementById('restoreAllTrash').addEventListener('click', async () => {
+            const confirm = await Swal.fire({
+                title: 'بازیابی همه',
+                text: 'همه‌ی آیتم‌های سطل زباله بازیابی می‌شوند.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'بله',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0'
+            });
+            if (!confirm.isConfirmed) return;
+            try {
+                const res = await fetch(`${API_BASE}/history/trash/restore-all`, { method: 'POST', credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                showToast('✅ همه‌ی آیتم‌ها بازیابی شدند.', 'success');
+                loadTrash();
+            } catch (err) {
+                showToast('❌ خطا', 'error');
+            }
+        });
+
+        document.getElementById('emptyTrash').addEventListener('click', async () => {
+            const confirm = await Swal.fire({
+                title: 'پاک‌سازی نهایی',
+                text: 'همه‌ی آیتم‌های سطل زباله برای همیشه حذف می‌شوند!',
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'بله، پاک‌سازی',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0'
+            });
+            if (!confirm.isConfirmed) return;
+            try {
+                const res = await fetch(`${API_BASE}/history/trash/empty`, { method: 'DELETE', credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                showToast('✅ سطل زباله خالی شد.', 'success');
+                loadTrash();
+            } catch (err) {
+                showToast('❌ خطا', 'error');
+            }
+        });
+
+        // ================================================================
+        //  آمار
+        // ================================================================
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_BASE}/dashboard/stats`, { credentials: 'include' });
+                if (!res.ok) throw new Error('خطا');
+                const data = await res.json();
+                document.getElementById('statScrapes').textContent = data.total_scrapes || 0;
+                document.getElementById('statMobiles').textContent = data.total_mobiles || 0;
+                document.getElementById('statEmails').textContent = data.total_emails || 0;
+                document.getElementById('statInstagram').textContent = data.total_instagram || 0;
+                document.getElementById('statYoutube').textContent = data.total_youtube || 0;
+
+                if (data.chart_data && data.chart_data.length > 0) {
+                    const ctx = document.getElementById('statsChart').getContext('2d');
+                    if (statsChart) statsChart.destroy();
+                    statsChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: data.chart_data.map(d => d.date),
+                            datasets: [{
+                                label: '📱 موبایل',
+                                data: data.chart_data.map(d => d.mobiles),
+                                backgroundColor: 'rgba(200,180,140,0.12)',
+                                borderColor: 'rgba(200,180,140,0.3)',
+                                borderWidth: 1
+                            }, {
+                                label: '✉️ ایمیل',
+                                data: data.chart_data.map(d => d.emails),
+                                backgroundColor: 'rgba(100,180,160,0.12)',
+                                borderColor: 'rgba(100,180,160,0.3)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { labels: { color: '#7a8a8a', font: { family: "'Share Tech Mono', monospace" } } },
+                                title: { display: true, text: '📊 روند استخراج', color: '#5a7a7a', font: { family: "'Share Tech Mono', monospace", size: 14 } }
+                            },
+                            scales: {
+                                y: { ticks: { color: '#5a7a7a' }, grid: { color: 'rgba(200,180,140,0.03)' } },
+                                x: { ticks: { color: '#5a7a7a', maxRotation: 45 }, grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('Stats error:', err);
+            }
+        }
+
+        // ================================================================
+        //  خروج / تغییر رمز
+        // ================================================================
+        document.getElementById('btnLogout').addEventListener('click', logout);
+        document.getElementById('btnLogin').addEventListener('click', () => openAuthModal('login'));
+
+        document.getElementById('btnChangePassword').addEventListener('click', async () => {
+            const { value: oldPassword } = await Swal.fire({
+                title: '🔑 تغییر رمز عبور',
+                input: 'password',
+                inputLabel: 'رمز عبور فعلی',
+                inputPlaceholder: 'رمز عبور فعلی را وارد کنید',
+                showCancelButton: true,
+                confirmButtonText: 'ادامه',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0',
+                inputAttributes: { autocapitalize: 'off' }
+            });
+            if (!oldPassword) return;
+            const { value: newPassword } = await Swal.fire({
+                title: '🔑 رمز عبور جدید',
+                input: 'password',
+                inputLabel: 'رمز عبور جدید (حداقل ۶ کاراکتر)',
+                inputPlaceholder: 'رمز عبور جدید را وارد کنید',
+                showCancelButton: true,
+                confirmButtonText: 'تغییر رمز',
+                cancelButtonText: 'لغو',
+                background: '#0e1419',
+                color: '#c8d8e0',
+                inputAttributes: { minlength: 6, autocapitalize: 'off' },
+                inputValidator: (val) => { if (!val || val.length < 6) return 'حداقل ۶ کاراکتر'; }
+            });
+            if (!newPassword) return;
+            try {
+                const res = await fetch(`${API_BASE}/auth/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+                });
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'خطا');
+                }
+                showToast('✅ رمز عبور با موفقیت تغییر کرد!', 'success');
+            } catch (err) {
+                showToast('❌ ' + err.message, 'error');
+            }
+        });
+
+        // ================================================================
+        //  شروع برنامه
+        // ================================================================
+        checkAuth();
+
+        console.log('🕵️ Minouta Spy Scraper (James Bond Edition) loaded!');
+        console.log('🔐 API Base:', API_BASE);
+    </script>
+    <!-- ==========================================================
+     شخصیت جاسوسی با پیام‌های تعاملی کامل
+     ========================================================== -->
+<style>
+    /* کانتینر شخصیت */
+    .spy-agent-container {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        width: 220px;
+        height: 280px;
+        z-index: 9999;
+        pointer-events: none;
+    }
+    .spy-agent-container canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 16px;
+        background: transparent;
+        pointer-events: auto;
+        cursor: pointer;
+        filter: drop-shadow(0 8px 30px rgba(0, 0, 0, 0.2));
+    }
+
+    /* حباب گفتار */
+    .speech-bubble {
+        position: absolute;
+        top: -20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.95);
+        color: #1a2a3a;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 0.85rem;
+        font-weight: 500;
+        white-space: nowrap;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 215, 0, 0.15);
+        transition: all 0.3s ease;
+        opacity: 0;
+        pointer-events: none;
+        direction: rtl;
+        max-width: 220px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        z-index: 10;
+    }
+    .speech-bubble.show {
+        opacity: 1;
+        top: -40px;
+    }
+    .speech-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid rgba(255, 255, 255, 0.95);
+    }
+    .speech-bubble.long {
+        white-space: normal;
+        max-width: 260px;
+        padding: 10px 18px;
+        font-size: 0.8rem;
+    }
+    .speech-bubble.angry {
+        border-color: rgba(255, 80, 80, 0.2);
+        background: rgba(255, 240, 240, 0.95);
+    }
+    .speech-bubble.happy {
+        border-color: rgba(255, 215, 0, 0.3);
+        background: rgba(255, 250, 240, 0.95);
+    }
+    .speech-bubble.sad {
+        border-color: rgba(80, 150, 255, 0.2);
+        background: rgba(240, 245, 255, 0.95);
+    }
+
+    /* وضعیت گوش دادن */
+    .listening-indicator {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 12px;
+        height: 12px;
+        background: #4fc3ff;
+        border-radius: 50%;
+        box-shadow: 0 0 20px rgba(79, 195, 255, 0.4);
+        animation: pulse-dot 1.5s ease-in-out infinite;
+        display: none;
+        pointer-events: none;
+        z-index: 10;
+    }
+    .listening-indicator.active {
+        display: block;
+    }
+    @keyframes pulse-dot {
+        0%, 100% { transform: scale(1); opacity: 0.6; }
+        50% { transform: scale(1.6); opacity: 1; }
+    }
+
+    /* برای موبایل */
+    @media (max-width: 768px) {
+        .spy-agent-container {
+            width: 150px;
+            height: 190px;
+            bottom: 10px;
+            left: 10px;
+        }
+        .speech-bubble {
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            max-width: 140px;
+        }
+        .speech-bubble.show { top: -30px; }
+        .speech-bubble.long { max-width: 160px; font-size: 0.65rem; }
+    }
+    @media (max-width: 480px) {
+        .spy-agent-container {
+            width: 110px;
+            height: 140px;
+            bottom: 5px;
+            left: 5px;
+        }
+        .speech-bubble {
+            font-size: 0.6rem;
+            padding: 3px 10px;
+            max-width: 110px;
+        }
+        .speech-bubble.show { top: -24px; }
+        .speech-bubble.long { max-width: 130px; font-size: 0.55rem; }
+    }
+</style>
+
+<div class="spy-agent-container" id="spyAgent">
+    <canvas id="spyCanvas"></canvas>
+    <div class="speech-bubble" id="speechBubble">🕵️ سلام!</div>
+    <div class="listening-indicator" id="listeningIndicator"></div>
+</div>
+
+<script>
+    // ================================================================
+    //  🕵️ شخصیت جاسوسی با پیام‌های تعاملی کامل
+    //  + تشخیص صدا + دنبال کردن ماوس + هوش مصنوعی
+    // ================================================================
+
+    (function() {
+        'use strict';
+
+        // -------- عناصر DOM --------
+        const container = document.getElementById('spyAgent');
+        const canvas = document.getElementById('spyCanvas');
+        const ctx = canvas.getContext('2d');
+        const bubble = document.getElementById('speechBubble');
+        const indicator = document.getElementById('listeningIndicator');
+
+        // -------- تنظیم اندازه --------
+        function resizeCanvas() {
+            const rect = container.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = rect.height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // -------- متغیرها --------
+        let mouseX = 0;
+        let mouseY = 0;
+        let isListening = false;
+        let recognition = null;
+        let speechTimeout = null;
+        let speechStarted = false;
+
+        // -------- سیستم پیام‌های عروسک جاسوسی --------
+        const SpyMessages = {
+            // ====== خروجی گرفتن ======
+            export: [
+                { text: 'ای شیطون اونی که میخواستی پیدا کردی 😏', style: 'happy' },
+                { text: 'چشمات رو باور نمیکنی ها! 😎', style: 'happy' },
+                { text: 'گفتم که پیدا میکنم! 🕵️', style: 'happy' },
+                { text: 'مگه من کمم؟! 😤', style: 'happy' },
+                { text: 'اینم از اطلاعات! 📊', style: 'happy' },
+            ],
+            // ====== اسکرپ ======
+            scrape: [
+                { text: 'دنبال چی میگرده یعنی؟؟ 🤔', style: 'normal' },
+                { text: 'آهان! فهمیدم چی کاره‌ای! 😏', style: 'normal' },
+                { text: 'بذار ببینم چی داری... 🔍', style: 'normal' },
+                { text: 'اوه! یه مأموریت جدید! 🕵️', style: 'normal' },
+                { text: 'چشم‌های تیزبین من آماده‌ست! 👀', style: 'normal' },
+                { text: 'بفرمایید! دارم اسکرپ میکنم... ⏳', style: 'normal' },
+            ],
+            // ====== پاک کردن ======
+            delete: [
+                { text: 'دیتابیس و خراب نکن 😡', style: 'angry' },
+                { text: 'وااای! چی کار داری میکنی؟! 😱', style: 'angry' },
+                { text: 'این دیگه چیه؟! 🗑️', style: 'angry' },
+                { text: 'بی‌انصاف! داری اطلاعاتمو پاک میکنی؟! 😭', style: 'sad' },
+                { text: 'هی! مواظب باش! 🛑', style: 'angry' },
+                { text: 'نهههه! داری خرابش میکنی! 😩', style: 'sad' },
+            ],
+            // ====== حذف همه ======
+            deleteAll: [
+                { text: 'همه‌شو؟! تو دیوونه‌ای؟! 😱', style: 'angry' },
+                { text: 'داری دیتابیس و نابود میکنی! 🆘', style: 'angry' },
+                { text: 'ای وای! ای وای! 😭', style: 'sad' },
+                { text: 'آخه چرا؟! 😤', style: 'angry' },
+                { text: 'حالا چیکار کنم؟! 🤷', style: 'sad' },
+            ],
+            // ====== بازیابی ======
+            restore: [
+                { text: 'آفرین! برگردوندیش! 😊', style: 'happy' },
+                { text: 'حیف نشد! 👍', style: 'happy' },
+                { text: 'خوب شد که پشیمون شدی! 😏', style: 'happy' },
+                { text: 'بازگردوندی؟! چه خوب! 🎉', style: 'happy' },
+            ],
+            // ====== ورود موفق ======
+            login: [
+                { text: 'خوش اومدی مأمور! 🕵️', style: 'happy' },
+                { text: 'آهان! تو اون مأموری! 😎', style: 'happy' },
+                { text: 'به خونه‌ی دوم خوش اومدی! 🏠', style: 'happy' },
+                { text: 'سلام مأمور! مأموریت چیه؟ 🎯', style: 'happy' },
+            ],
+            // ====== خروج ======
+            logout: [
+                { text: 'ای بابا! داری میری؟ 😢', style: 'sad' },
+                { text: 'بر میگردی مگه؟ 🥺', style: 'sad' },
+                { text: 'خداحافظ مأمور! 👋', style: 'sad' },
+                { text: 'دلم برات تنگ میشه! 😭', style: 'sad' },
+            ],
+            // ====== خطا ======
+            error: [
+                { text: 'اوه! یه مشکلی پیش اومد! 😬', style: 'angry' },
+                { text: 'این دیگه چیه؟! 🤔', style: 'normal' },
+                { text: 'باید یه کاری کنم... 🔧', style: 'normal' },
+                { text: 'هی! داری اشتباه میزنی! ⚠️', style: 'angry' },
+            ],
+            // ====== موفقیت ======
+            success: [
+                { text: 'آفرین! عالی بود! 👏', style: 'happy' },
+                { text: 'مگه من نیستم؟! 😎', style: 'happy' },
+                { text: 'بله! انجام شد! 🎉', style: 'happy' },
+                { text: 'چه کار خوبی کردی! 👍', style: 'happy' },
+            ],
+            // ====== ورود به صفحه ======
+            welcome: [
+                { text: 'به پایگاه داده خوش اومدی! 🕵️', style: 'happy' },
+                { text: 'سلام! من مأمور مینوتا هستم! 🤝', style: 'happy' },
+                { text: 'آماده‌ای برای مأموریت؟ 🎯', style: 'happy' },
+                { text: 'خوش اومدی! بذار ببینم چی داری... 👀', style: 'normal' },
+            ],
+            // ====== کلیک روی عروسک ======
+            click: [
+                { text: 'آی! چرا میزنی؟! 😤', style: 'angry' },
+                { text: 'سلام! چطوری؟ 😊', style: 'happy' },
+                { text: 'چه خبر؟! 🕵️', style: 'normal' },
+                { text: 'آره؟ بفرمایید! 📞', style: 'normal' },
+                { text: 'مگه من چی کارت کردم؟! 🤷', style: 'angry' },
+            ],
+            // ====== حرکت ماوس روی عروسک ======
+            hover: [
+                { text: 'چیزی میخوای؟ 🤔', style: 'normal' },
+                { text: 'سلام! 👋', style: 'happy' },
+                { text: 'به من نگاه نکن! 😳', style: 'normal' },
+                { text: 'آهای! 🕵️', style: 'normal' },
+            ],
+            // ====== اسکرپ خالی ======
+            emptyScrape: [
+                { text: 'هی! آدرس رو خالی گذاشتی! 😤', style: 'angry' },
+                { text: 'مگه من با هوا کار میکنم؟! 🤨', style: 'angry' },
+                { text: 'لطفاً یه آدرس بده! 🙏', style: 'normal' },
+                { text: 'بیا یه چیزی بنویس! ✍️', style: 'normal' },
+            ],
+            // ====== پاک کردن تک ======
+            deleteSingle: [
+                { text: 'داری یکی و پاک میکنی؟ 🤔', style: 'normal' },
+                { text: 'مطمئنی؟ 🧐', style: 'normal' },
+                { text: 'باشه! هر چی تو بگی! 🗑️', style: 'sad' },
+                { text: 'اگه مطمئنی... 😒', style: 'normal' },
+            ],
+            // ====== بازیابی همه ======
+            restoreAll: [
+                { text: 'چه خبره؟! همه و برگردوندی؟! 😱', style: 'happy' },
+                { text: 'آفرین! دوباره زنده شدن! 🎉', style: 'happy' },
+                { text: 'حیف نشد مگه؟! 😏', style: 'happy' },
+                { text: 'چه کار خوبی کردی! 👍', style: 'happy' },
+            ],
+            // ====== سطل زباله خالی ======
+            emptyTrash: [
+                { text: 'سطل زباله خالی شد! 🧹', style: 'normal' },
+                { text: 'تمیز شد! 😊', style: 'happy' },
+                { text: 'حالا تمیزه! ✨', style: 'happy' },
+                { text: 'خوب شد! 🎉', style: 'happy' },
+            ],
+        };
+
+        // -------- تابع نمایش پیام با سبک --------
+        function showSpeech(text, style = 'normal', duration = 2500) {
+            bubble.textContent = text;
+            bubble.className = 'speech-bubble';
+            if (style === 'angry') bubble.classList.add('angry');
+            else if (style === 'happy') bubble.classList.add('happy');
+            else if (style === 'sad') bubble.classList.add('sad');
+            if (text.length > 20) bubble.classList.add('long');
+            bubble.classList.add('show');
+            clearTimeout(speechTimeout);
+            speechTimeout = setTimeout(() => {
+                bubble.classList.remove('show');
+            }, duration);
+        }
+
+        // -------- تابع دریافت پیام تصادفی از دسته --------
+        function getRandomMessage(category) {
+            const messages = SpyMessages[category];
+            if (!messages || messages.length === 0) return { text: '🕵️ سلام!', style: 'normal' };
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        // -------- API عمومی برای فراخوانی از بیرون --------
+        window.SpyAgent = {
+            // نمایش پیام از یک دسته
+            say: function(category, customText = null) {
+                if (customText) {
+                    showSpeech(customText, 'normal', 3000);
+                    return;
+                }
+                const msg = getRandomMessage(category);
+                showSpeech(msg.text, msg.style, 3000);
+                // حرکت تصادفی برای هماهنگی با پیام
+                if (category === 'delete' || category === 'deleteAll' || category === 'emptyTrash') {
+                    agent.setState('dance');
+                    setTimeout(() => agent.setState('idle'), 2000);
+                } else if (category === 'scrape' || category === 'export') {
+                    agent.setState('walk');
+                    setTimeout(() => agent.setState('idle'), 2000);
+                } else if (category === 'login') {
+                    agent.setState('wave');
+                    setTimeout(() => agent.setState('idle'), 2000);
+                } else if (category === 'logout') {
+                    agent.setState('wave');
+                    setTimeout(() => agent.setState('idle'), 1500);
+                } else if (category === 'success') {
+                    agent.setState('dance');
+                    setTimeout(() => agent.setState('idle'), 2000);
+                }
+            },
+            // نمایش پیام دلخواه
+            sayCustom: function(text, style = 'normal', duration = 3000) {
+                showSpeech(text, style, duration);
+            },
+            // حالت‌های مختلف
+            react: function(action) {
+                if (action === 'dance') {
+                    agent.setState('dance');
+                    setTimeout(() => agent.setState('idle'), 2500);
+                } else if (action === 'jump') {
+                    agent.jump();
+                } else if (action === 'wave') {
+                    agent.setState('wave');
+                    setTimeout(() => agent.setState('idle'), 2000);
+                } else if (action === 'walk') {
+                    agent.setState('walk');
+                    setTimeout(() => agent.setState('idle'), 3000);
+                } else if (action === 'run') {
+                    agent.setState('run');
+                    setTimeout(() => agent.setState('idle'), 2500);
+                } else if (action === 'flip') {
+                    agent.setState('flip');
+                }
+            },
+            // تغییر حالت دستی
+            setState: function(state) {
+                if (state === 'jump') agent.jump();
+                else agent.setState(state);
+            }
+        };
+
+        console.log('🕵️ SpyAgent API آماده است!');
+        console.log('روش استفاده: SpyAgent.say("scrape") یا SpyAgent.sayCustom("پیام دلخواه")');
+
+        // ================================================================
+        //  اتصال به رویدادهای صفحه (با MutationObserver و EventListener)
+        // ================================================================
+
+        // -------- تابع برای پیدا کردن دکمه‌ها و اتصال --------
+        function connectToButtons() {
+            // دکمه‌های خروجی (CSV, JSON, TXT, ZIP)
+            const exportButtons = ['exportCSV', 'exportJSON', 'exportTXT', 'exportZIP'];
+            exportButtons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn && !btn._spyConnected) {
+                    btn._spyConnected = true;
+                    btn.addEventListener('click', function() {
+                        Window.SpyAgent.say('export');
+                    });
+                }
+            });
+
+            // دکمه اسکرپ
+            const scrapeBtn = document.getElementById('submitScrape');
+            if (scrapeBtn && !scrapeBtn._spyConnected) {
+                scrapeBtn._spyConnected = true;
+                scrapeBtn.addEventListener('click', function() {
+                    const urlInput = document.getElementById('urlInput');
+                    if (urlInput && !urlInput.value.trim()) {
+                        Window.SpyAgent.say('emptyScrape');
+                    } else {
+                        Window.SpyAgent.say('scrape');
+                    }
+                });
+            }
+
+            // دکمه حذف همه
+            const deleteAllBtn = document.getElementById('deleteAllHistory');
+            if (deleteAllBtn && !deleteAllBtn._spyConnected) {
+                deleteAllBtn._spyConnected = true;
+                deleteAllBtn.addEventListener('click', function() {
+                    Window.SpyAgent.say('deleteAll');
+                });
+            }
+
+            // دکمه حذف در تاریخچه (دکمه‌های جداگانه)
+            const historyItems = document.querySelectorAll('.history-item .badge.danger');
+            historyItems.forEach(item => {
+                if (!item._spyConnected) {
+                    item._spyConnected = true;
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        Window.SpyAgent.say('deleteSingle');
+                    });
+                }
+            });
+
+            // دکمه‌های بازیابی
+            const restoreBtns = document.querySelectorAll('.badge.success');
+            restoreBtns.forEach(item => {
+                if (!item._spyConnected && item.textContent.includes('بازیابی')) {
+                    item._spyConnected = true;
+                    item.addEventListener('click', function() {
+                        Window.SpyAgent.say('restore');
+                    });
+                }
+            });
+
+            // دکمه بازیابی همه
+            const restoreAllBtn = document.getElementById('restoreAllTrash');
+            if (restoreAllBtn && !restoreAllBtn._spyConnected) {
+                restoreAllBtn._spyConnected = true;
+                restoreAllBtn.addEventListener('click', function() {
+                    Window.SpyAgent.say('restoreAll');
+                });
+            }
+
+            // دکمه پاک‌سازی سطل زباله
+            const emptyTrashBtn = document.getElementById('emptyTrash');
+            if (emptyTrashBtn && !emptyTrashBtn._spyConnected) {
+                emptyTrashBtn._spyConnected = true;
+                emptyTrashBtn.addEventListener('click', function() {
+                    Window.SpyAgent.say('emptyTrash');
+                });
+            }
+
+            // دکمه ورود
+            const loginBtn = document.getElementById('btnLogin');
+            if (loginBtn && !loginBtn._spyConnected) {
+                loginBtn._spyConnected = true;
+                loginBtn.addEventListener('click', function() {
+                    // در لاگین موفق بعداً پیام داده می‌شود
+                });
+            }
+
+            // دکمه خروج
+            const logoutBtn = document.getElementById('btnLogout');
+            if (logoutBtn && !logoutBtn._spyConnected) {
+                logoutBtn._spyConnected = true;
+                logoutBtn.addEventListener('click', function() {
+                    Window.SpyAgent.say('logout');
+                });
+            }
+        }
+
+        // -------- مشاهده‌گر برای تغییرات DOM --------
+        const observer = new MutationObserver(function() {
+            connectToButtons();
+        });
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // -------- اتصال اولیه --------
+        setTimeout(connectToButtons, 1000);
+
+        // -------- شنود رویدادهای لاگین موفق --------
+        // با استفاده از intercept کردن fetch
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            if (typeof url === 'string' && url.includes('/auth/login')) {
+                return originalFetch.apply(this, args).then(response => {
+                    const cloned = response.clone();
+                    if (response.ok) {
+                        setTimeout(() => {
+                            Window.SpyAgent.say('login');
+                        }, 500);
+                    } else {
+                        setTimeout(() => {
+                            Window.SpyAgent.say('error');
+                        }, 500);
+                    }
+                    return response;
+                });
+            }
+            return originalFetch.apply(this, args);
+        };
+
+        // -------- شنود رویدادهای موفقیت --------
+        // برای اسکرپ موفق
+        const originalFetchScrape = window.fetch;
+        window.fetch = function(...args) {
+            const url = args[0];
+            if (typeof url === 'string' && url.includes('/scrape')) {
+                return originalFetchScrape.apply(this, args).then(response => {
+                    const cloned = response.clone();
+                    if (response.ok) {
+                        cloned.json().then(data => {
+                            if (data.results && data.results[0] && !data.results[0].error) {
+                                setTimeout(() => {
+                                    Window.SpyAgent.say('success');
+                                }, 500);
+                            }
+                        }).catch(() => {});
+                    }
+                    return response;
+                });
+            }
+            return originalFetchScrape.apply(this, args);
+        };
+
+        // ================================================================
+        //  تشخیص صدا (Web Speech API)
+        // ================================================================
+        function initSpeechRecognition() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                console.log('❌ تشخیص صدا پشتیبانی نمی‌شود.');
+                return;
+            }
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.lang = 'fa-IR';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onstart = function() {
+                isListening = true;
+                indicator.classList.add('active');
+                showSpeech('🎤 گوش می‌دم...', 'normal', 1500);
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                indicator.classList.remove('active');
+                if (!document.hidden) {
+                    setTimeout(() => {
+                        try { recognition.start(); } catch (e) {}
+                    }, 500);
+                }
+            };
+
+            recognition.onerror = function(event) {
+                if (event.error === 'not-allowed') {
+                    showSpeech('❌ دسترسی به میکروفون مجاز نیست', 'angry', 2000);
+                    return;
+                }
+                setTimeout(() => {
+                    try { recognition.start(); } catch (e) {}
+                }, 1000);
+            };
+
+            recognition.onresult = function(event) {
+                let final = '';
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        final += transcript;
+                    } else {
+                        interim += transcript;
+                    }
+                }
+                const text = final || interim;
+                if (text.trim()) {
+                    const lower = text.toLowerCase();
+                    if (lower.includes('سلام') || lower.includes('درود') || lower.includes('علیک')) {
+                        showSpeech('🕵️ سلام! مأموریت؟', 'happy', 2000);
+                        agent.setState('wave');
+                        setTimeout(() => agent.setState('idle'), 2000);
+                    } else if (lower.includes('برو') || lower.includes('حرکت') || lower.includes('راه')) {
+                        showSpeech('🚶 در حال حرکت...', 'normal', 1500);
+                        agent.setState('walk');
+                        setTimeout(() => agent.setState('idle'), 3000);
+                    } else if (lower.includes('بدو') || lower.includes('دویدن')) {
+                        showSpeech('🏃 سریع!', 'normal', 1200);
+                        agent.setState('run');
+                        setTimeout(() => agent.setState('idle'), 2500);
+                    } else if (lower.includes('رقص') || lower.includes('برقص')) {
+                        showSpeech('💃 بله آقا!', 'happy', 1500);
+                        agent.setState('dance');
+                        setTimeout(() => agent.setState('idle'), 3000);
+                    } else if (lower.includes('پرش') || lower.includes('بپر')) {
+                        showSpeech('🦘 جامپ!', 'normal', 1000);
+                        agent.jump();
+                    } else if (lower.includes('چرخ') || lower.includes('پشتک')) {
+                        showSpeech('🤸 پشتک!', 'normal', 1200);
+                        agent.setState('flip');
+                        setTimeout(() => agent.setState('idle'), 3000);
+                    } else if (lower.includes('تکان') || lower.includes('دست')) {
+                        showSpeech('👋 سلام!', 'happy', 1500);
+                        agent.setState('wave');
+                        setTimeout(() => agent.setState('idle'), 2000);
+                    } else if (lower.includes('مخفی') || lower.includes('پنهان')) {
+                        showSpeech('🤫 ششش...', 'normal', 1500);
+                        agent.setState('idle');
+                    } else if (lower.includes('اطلاعات') || lower.includes('گزارش')) {
+                        showSpeech('📋 اطلاعات در حال پردازش...', 'normal', 2000);
+                    } else if (lower.includes('متشکرم') || lower.includes('مرسی')) {
+                        showSpeech('🙏 خواهش می‌کنم!', 'happy', 1500);
+                    } else if (lower.includes('خداحافظ') || lower.includes('بای')) {
+                        showSpeech('👋 خداحافظ مأمور!', 'sad', 1500);
+                        agent.setState('wave');
+                        setTimeout(() => agent.setState('idle'), 2000);
+                    } else if (text.length > 2) {
+                        const randomMsgs = [
+                            '🕵️ مأموریت در حال اجرا...',
+                            '🔍 دارم بررسی می‌کنم...',
+                            '📡 سیگنال دریافت شد!',
+                            '🎯 هدف پیدا شد!',
+                            '📞 دارم تماس می‌گیرم...',
+                            '💻 رمزگشایی اطلاعات...',
+                            '🔄 در حال اسکن محیط...',
+                            '⚡ عملیات موفق!',
+                            '🕵️‍♂️ به مأموریت ادامه دهید!'
+                        ];
+                        const msg = randomMsgs[Math.floor(Math.random() * randomMsgs.length)];
+                        showSpeech(msg, 'normal', 1800);
+                        const reactions = ['idle', 'walk', 'dance', 'wave'];
+                        const r = reactions[Math.floor(Math.random() * reactions.length)];
+                        if (r !== 'idle') {
+                            agent.setState(r);
+                            setTimeout(() => agent.setState('idle'), 2000);
+                        }
+                    }
+                }
+            };
+
+            try {
+                recognition.start();
+            } catch (e) {}
+        }
+
+        function startSpeechOnInteraction() {
+            if (speechStarted) return;
+            speechStarted = true;
+            initSpeechRecognition();
+            showSpeech('🎤 گوش می‌دم...', 'normal', 1500);
+        }
+
+        // -------- شروع تشخیص صدا با کلیک --------
+        canvas.addEventListener('click', () => {
+            startSpeechOnInteraction();
+            const msg = getRandomMessage('click');
+            showSpeech(msg.text, msg.style, 2000);
+            const actions = ['jump', 'wave', 'dance'];
+            const action = actions[Math.floor(Math.random() * actions.length)];
+            if (action === 'jump') agent.jump();
+            else {
+                agent.setState(action);
+                setTimeout(() => agent.setState('idle'), 2500);
+            }
+        });
+
+        canvas.addEventListener('mouseenter', () => {
+            startSpeechOnInteraction();
+            const msg = getRandomMessage('hover');
+            showSpeech(msg.text, msg.style, 1500);
+        });
+
+        // همچنین با کلیک روی صفحه
+        document.addEventListener('click', function firstClick() {
+            startSpeechOnInteraction();
+            document.removeEventListener('click', firstClick);
+        }, { once: true });
+
+        // ================================================================
+        //  موتور انیمیشن
+        // ================================================================
+        class AnimationEngine {
+            constructor() {
+                this.animations = {};
+                this.current = 'idle';
+                this.frame = 0;
+                this.elapsed = 0;
+                this.speed = 1;
+                this.loop = true;
+                this.finished = false;
+            }
+            add(name, frames, fps = 12, loop = true) {
+                this.animations[name] = { name, frames, fps, loop };
+            }
+            play(name) {
+                if (!this.animations[name] || this.current === name) return;
+                this.current = name;
+                this.frame = 0;
+                this.elapsed = 0;
+                this.finished = false;
+                this.loop = this.animations[name].loop;
+            }
+            update(dt) {
+                const anim = this.animations[this.current];
+                if (!anim) return;
+                this.elapsed += dt;
+                const frameTime = 1000 / (anim.fps * this.speed);
+                if (this.elapsed >= frameTime) {
+                    this.elapsed = 0;
+                    this.frame++;
+                    if (this.frame >= anim.frames) {
+                        if (anim.loop) {
+                            this.frame = 0;
+                        } else {
+                            this.frame = anim.frames - 1;
+                            this.finished = true;
+                        }
+                    }
+                }
+            }
+            getFrame() { return this.frame; }
+            isFinished() { return this.finished; }
+        }
+
+        const animator = new AnimationEngine();
+        animator.add('idle', 8, 6, true);
+        animator.add('walk', 12, 14, true);
+        animator.add('run', 10, 22, true);
+        animator.add('dance', 20, 18, true);
+        animator.add('flip', 24, 30, false);
+        animator.add('wave', 16, 12, false);
+        animator.add('jump', 10, 16, false);
+
+        class AnimationQueue {
+            constructor(animator) {
+                this.animator = animator;
+                this.queue = [];
+            }
+            push(name) { this.queue.push(name); }
+            update() {
+                if (this.animator.isFinished()) {
+                    if (this.queue.length > 0) {
+                        this.animator.play(this.queue.shift());
+                    } else {
+                        this.animator.play('idle');
+                    }
+                }
+            }
+        }
+        const animationQueue = new AnimationQueue(animator);
+
+        // -------- ذرات --------
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 3;
+                this.vy = -Math.random() * 3;
+                this.life = 1;
+                this.size = 2 + Math.random() * 4;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.05;
+                this.life -= 0.015;
+            }
+            draw(ctx) {
+                if (this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.7;
+                ctx.fillStyle = '#ffd54f';
+                ctx.shadowColor = '#ffd54f';
+                ctx.shadowBlur = 12;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // -------- کلاس شخصیت --------
+        class Agent {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = ctx;
+                const rect = canvas.getBoundingClientRect();
+                this.width = rect.width;
+                this.height = rect.height;
+                this.x = this.width / 2;
+                this.y = this.height / 2 + 20;
+                this.scale = 0.75;
+                this.widthChar = 80;
+                this.heightChar = 140;
+                this.speed = 2.5;
+                this.direction = 1;
+                this.vx = this.speed;
+                this.vy = 0;
+                this.gravity = 0.45;
+                this.ground = this.y;
+                this.state = 'idle';
+                this.onGround = true;
+                this.time = 0;
+                this.blinkTimer = 0;
+                this.actionTimer = 0;
+                this.nextAction = 4000;
+                this.animator = animator;
+                this.headAngle = 0;
+                this.bodyAngle = 0;
+                this.leftArm = 0;
+                this.rightArm = 0;
+                this.leftForeArm = 0;
+                this.rightForeArm = 0;
+                this.leftLeg = 0;
+                this.rightLeg = 0;
+                this.leftFoot = 0;
+                this.rightFoot = 0;
+                this.eyeScale = 1;
+                this.rotationSpeed = 0;
+                this.particles = [];
+                this.interactionCooldown = 0;
+            }
+
+            setState(name) {
+                if (this.state === name) return;
+                this.state = name;
+                this.animator.play(name);
+                if (name === 'flip') {
+                    this.onGround = false;
+                    this.vy = -11;
+                    this.rotationSpeed = 0.45;
+                }
+                if (name === 'jump') {
+                    this.jump();
+                }
+            }
+
+            jump() {
+                if (!this.onGround) return;
+                this.onGround = false;
+                this.vy = -10;
+                this.setState('jump');
+            }
+
+            update(dt) {
+                this.time += dt;
+                this.updateBlink(dt);
+                const frame = this.animator.getFrame();
+                this.updateArms(frame);
+                this.updateLegs(frame);
+                this.updateMovement();
+
+                const rect = canvas.getBoundingClientRect();
+                const cx = this.x;
+                const cy = this.y - 120 * this.scale;
+                const dx = mouseX - cx;
+                const dy = mouseY - cy;
+                this.headAngle = Math.atan2(dy, dx) * 0.25;
+                if (mouseX < 0 || mouseX > rect.width || mouseY < 0 || mouseY > rect.height) {
+                    this.headAngle *= 0.95;
+                }
+
+                if (this.state === 'flip') {
+                    this.bodyAngle += this.rotationSpeed;
+                    if (this.onGround) {
+                        this.bodyAngle = 0;
+                        if (this.state === 'flip') this.setState('idle');
+                    }
+                }
+
+                this.updateAI(dt);
+                this.updateParticles();
+                this.animator.update(dt);
+                animationQueue.update();
+                if (this.interactionCooldown > 0) {
+                    this.interactionCooldown -= dt;
+                }
+            }
+
+            updateMovement() {
+                this.x += this.vx;
+                this.y += this.vy;
+                if (!this.onGround) {
+                    this.vy += this.gravity;
+                }
+                if (this.y >= this.ground) {
+                    this.y = this.ground;
+                    this.vy = 0;
+                    this.onGround = true;
+                    if (this.state === 'jump') this.setState('idle');
+                }
+                const pad = 50;
+                if (this.x < pad) {
+                    this.x = pad;
+                    this.direction = 1;
+                    this.vx = Math.abs(this.speed);
+                }
+                if (this.x > this.width - pad) {
+                    this.x = this.width - pad;
+                    this.direction = -1;
+                    this.vx = -Math.abs(this.speed);
+                }
+            }
+
+            updateAI(dt) {
+                if (this.interactionCooldown > 0) return;
+                this.actionTimer += dt;
+                if (this.actionTimer < this.nextAction) return;
+                this.actionTimer = 0;
+                this.nextAction = this.random(3000, 8000);
+                this.chooseRandomAction();
+            }
+
+            chooseRandomAction() {
+                const actions = ['idle', 'walk', 'run', 'dance', 'wave', 'jump', 'flip'];
+                let action;
+                do {
+                    action = actions[Math.floor(Math.random() * actions.length)];
+                } while (action === this.state);
+                this.setState(action);
+                switch (action) {
+                    case 'walk':
+                        this.speed = 2;
+                        this.vx = this.direction * this.speed;
+                        break;
+                    case 'run':
+                        this.speed = 5;
+                        this.vx = this.direction * this.speed;
+                        break;
+                    case 'idle':
+                        this.speed = 0;
+                        this.vx = 0;
+                        break;
+                    case 'jump':
+                        this.jump();
+                        break;
+                    case 'wave':
+                    case 'dance':
+                        this.speed = 0;
+                        this.vx = 0;
+                        break;
+                    case 'flip':
+                        this.setState('flip');
+                        break;
+                }
+            }
+
+            random(min, max) {
+                return Math.floor(Math.random() * (max - min) + min);
+            }
+
+            updateBlink(dt) {
+                this.blinkTimer += dt;
+                if (this.blinkTimer > 4000) {
+                    this.eyeScale = 0.05;
+                }
+                if (this.blinkTimer > 4100) {
+                    this.eyeScale = 1;
+                    this.blinkTimer = 0;
+                }
+            }
+
+            spawnParticles(count = 8) {
+                for (let i = 0; i < count; i++) {
+                    this.particles.push(new Particle(this.x, this.y - 120 * this.scale));
+                }
+            }
+
+            updateParticles() {
+                this.particles = this.particles.filter(p => {
+                    p.update();
+                    return p.life > 0;
+                });
+            }
+
+            draw() {
+                const ctx = this.ctx;
+                const s = this.scale;
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+                ctx.scale(s, s);
+                this.drawShadow(ctx);
+                this.drawLegs(ctx);
+                this.drawBody(ctx);
+                this.drawArms(ctx);
+                this.drawHead(ctx);
+                this.drawEffects(ctx);
+                ctx.restore();
+            }
+
+            drawShadow(ctx) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 38, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            drawLegs(ctx) {
+                ctx.save();
+                ctx.translate(0, -10);
+                this.drawLeg(ctx, -13, this.leftLeg, this.leftFoot);
+                this.drawLeg(ctx, 13, this.rightLeg, this.rightFoot);
+                ctx.restore();
+            }
+
+            drawLeg(ctx, x, hipAngle, footAngle) {
+                ctx.save();
+                ctx.translate(x, 0);
+                ctx.rotate(hipAngle);
+                ctx.lineWidth = 16;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1b1b1b';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 42);
+                ctx.stroke();
+                ctx.translate(0, 42);
+                ctx.fillStyle = '#222';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.rotate(-hipAngle * 0.55);
+                ctx.lineWidth = 14;
+                ctx.strokeStyle = '#151515';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 38);
+                ctx.stroke();
+                ctx.translate(0, 38);
+                ctx.rotate(footAngle);
+                this.drawShoe(ctx);
+                ctx.restore();
+            }
+
+            drawShoe(ctx) {
+                ctx.save();
+                const g = ctx.createLinearGradient(-10, 0, 18, 8);
+                g.addColorStop(0, '#444');
+                g.addColorStop(0.4, '#111');
+                g.addColorStop(1, '#000');
+                ctx.fillStyle = g;
+                ctx.beginPath();
+                ctx.moveTo(-6, -2);
+                ctx.quadraticCurveTo(8, -4, 18, 2);
+                ctx.quadraticCurveTo(20, 8, 12, 10);
+                ctx.lineTo(-8, 10);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(2, 2);
+                ctx.lineTo(14, 3);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            drawBody(ctx) {
+                ctx.save();
+                ctx.translate(0, -62);
+                ctx.rotate(this.bodyAngle);
+                const jacket = ctx.createLinearGradient(0, -40, 0, 55);
+                jacket.addColorStop(0, '#3a3a3a');
+                jacket.addColorStop(0.5, '#1d1d1d');
+                jacket.addColorStop(1, '#0b0b0b');
+                ctx.fillStyle = jacket;
+                this.roundRect(ctx, -28, -30, 56, 78, 12);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.03)';
+                this.roundRect(ctx, -24, -26, 48, 70, 10);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.moveTo(-9, -28);
+                ctx.lineTo(9, -28);
+                ctx.lineTo(13, 40);
+                ctx.lineTo(-13, 40);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#ececec';
+                ctx.beginPath();
+                ctx.moveTo(-14, -28);
+                ctx.lineTo(0, -6);
+                ctx.lineTo(-4, -28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(14, -28);
+                ctx.lineTo(0, -6);
+                ctx.lineTo(4, -28);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#111';
+                ctx.beginPath();
+                ctx.ellipse(-6, -15, 7, 5, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(6, -15, 7, 5, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(0, -15, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#161616';
+                ctx.beginPath();
+                ctx.moveTo(-20, -30);
+                ctx.lineTo(-5, 6);
+                ctx.lineTo(-2, -30);
+                ctx.closePath();
+                ctx.fill();
+                ctx.beginPath();
+                ctx.moveTo(20, -30);
+                ctx.lineTo(5, 6);
+                ctx.lineTo(2, -30);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = '#d7b04c';
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    ctx.arc(0, 5 + i * 15, 2.6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(-22, 18);
+                ctx.lineTo(-10, 18);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(10, 18);
+                ctx.lineTo(22, 18);
+                ctx.stroke();
+                ctx.fillStyle = '#fafafa';
+                ctx.beginPath();
+                ctx.moveTo(14, -2);
+                ctx.lineTo(18, -10);
+                ctx.lineTo(22, -2);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
+            drawArms(ctx) {
+                ctx.save();
+                ctx.translate(0, -88);
+                this.drawArm(ctx, -24, -5, this.leftArm, this.leftForeArm, false);
+                this.drawArm(ctx, 24, -5, this.rightArm, this.rightForeArm, true);
+                ctx.restore();
+            }
+
+            drawArm(ctx, x, y, shoulder, elbow, gadget = false) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.rotate(shoulder);
+                ctx.lineWidth = 14;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#111';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 30);
+                ctx.stroke();
+                ctx.translate(0, 30);
+                ctx.fillStyle = '#1d1d1d';
+                ctx.beginPath();
+                ctx.arc(0, 0, 7, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.rotate(elbow);
+                ctx.lineWidth = 12;
+                ctx.strokeStyle = '#181818';
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(0, 26);
+                ctx.stroke();
+                ctx.translate(0, 26);
+                ctx.fillStyle = '#ffd7be';
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(6, -2, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+                if (gadget) {
+                    ctx.save();
+                    ctx.translate(14, 0);
+                    ctx.fillStyle = '#2b2b2b';
+                    this.roundRect(ctx, -3, -3, 20, 6, 3);
+                    ctx.fill();
+                    ctx.fillStyle = '#c7c7c7';
+                    ctx.fillRect(17, -1, 7, 2);
+                    ctx.shadowColor = '#4fc3ff';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = '#4fc3ff';
+                    ctx.beginPath();
+                    ctx.arc(10, 0, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+                }
+                ctx.restore();
+            }
+
+            drawHead(ctx) {
+                ctx.save();
+                ctx.translate(0, -120);
+                ctx.rotate(this.headAngle);
+                ctx.fillStyle = '#4b2d18';
+                ctx.beginPath();
+                ctx.arc(0, -6, 32, Math.PI, 0);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(-22, -2, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(22, -2, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffd7be';
+                ctx.beginPath();
+                ctx.ellipse(0, 12, 30, 34, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffd7be';
+                ctx.beginPath();
+                ctx.ellipse(-31, 12, 4, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(31, 12, 4, 7, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#3b2413';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-18, 2);
+                ctx.lineTo(-8, 0);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(8, 0);
+                ctx.lineTo(18, 2);
+                ctx.stroke();
+                ctx.save();
+                ctx.translate(-12, 10);
+                ctx.scale(1, this.eyeScale);
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2d7cff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(-1, -1, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                ctx.save();
+                ctx.translate(12, 10);
+                ctx.scale(1, this.eyeScale);
+                ctx.fillStyle = 'white';
+                ctx.beginPath();
+                ctx.arc(0, 0, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#2d7cff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(-1, -1, 1.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                ctx.strokeStyle = '#e2b89a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, 16);
+                ctx.lineTo(-1, 24);
+                ctx.stroke();
+                ctx.strokeStyle = '#a54b4b';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 30, 6, 0, Math.PI);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(255,120,120,0.15)';
+                ctx.beginPath();
+                ctx.arc(-18, 24, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(18, 24, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            drawEffects(ctx) {
+                this.particles.forEach(p => p.draw(ctx));
+            }
+
+            updateArms(frame) {
+                switch (this.state) {
+                    case 'idle':
+                        this.leftArm = Math.sin(frame * 0.08) * 0.08;
+                        this.rightArm = -Math.sin(frame * 0.08) * 0.08;
+                        this.leftForeArm = 0;
+                        this.rightForeArm = 0;
+                        break;
+                    case 'walk':
+                        this.leftArm = Math.sin(frame * 0.22) * 0.65;
+                        this.rightArm = -Math.sin(frame * 0.22) * 0.65;
+                        this.leftForeArm = 0.18;
+                        this.rightForeArm = -0.18;
+                        break;
+                    case 'run':
+                        this.leftArm = Math.sin(frame * 0.45) * 1.1;
+                        this.rightArm = -Math.sin(frame * 0.45) * 1.1;
+                        this.leftForeArm = 0.45;
+                        this.rightForeArm = -0.45;
+                        break;
+                    case 'wave':
+                        this.leftArm = 0;
+                        this.leftForeArm = 0;
+                        this.rightArm = -1.4;
+                        this.rightForeArm = Math.sin(frame * 0.5) * 0.8;
+                        break;
+                    case 'jump':
+                        this.leftArm = -0.6;
+                        this.rightArm = 0.6;
+                        this.leftForeArm = 0.3;
+                        this.rightForeArm = -0.3;
+                        break;
+                    case 'dance':
+                        this.leftArm = Math.sin(frame * 0.35);
+                        this.rightArm = Math.cos(frame * 0.35);
+                        this.leftForeArm = Math.sin(frame * 0.25);
+                        this.rightForeArm = Math.cos(frame * 0.25);
+                        break;
+                    case 'flip':
+                        this.leftArm = Math.sin(frame * 0.55) * 1.2;
+                        this.rightArm = Math.cos(frame * 0.55) * 1.2;
+                        this.leftForeArm = Math.sin(frame * 0.45) * 0.5;
+                        this.rightForeArm = Math.cos(frame * 0.45) * 0.5;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            updateLegs(frame) {
+                switch (this.state) {
+                    case 'idle':
+                        this.leftLeg = Math.sin(frame * 0.06) * 0.03;
+                        this.rightLeg = -Math.sin(frame * 0.06) * 0.03;
+                        this.leftFoot = 0;
+                        this.rightFoot = 0;
+                        break;
+                    case 'walk':
+                        this.leftLeg = Math.sin(frame * 0.18) * 0.65;
+                        this.rightLeg = -Math.sin(frame * 0.18) * 0.65;
+                        this.leftFoot = -Math.sin(frame * 0.18) * 0.18;
+                        this.rightFoot = Math.sin(frame * 0.18) * 0.18;
+                        break;
+                    case 'run':
+                        this.leftLeg = Math.sin(frame * 0.42) * 1.05;
+                        this.rightLeg = -Math.sin(frame * 0.42) * 1.05;
+                        this.leftFoot = -Math.sin(frame * 0.42) * 0.35;
+                        this.rightFoot = Math.sin(frame * 0.42) * 0.35;
+                        break;
+                    case 'jump':
+                        this.leftLeg = -0.55;
+                        this.rightLeg = 0.55;
+                        this.leftFoot = 0.25;
+                        this.rightFoot = -0.25;
+                        break;
+                    case 'flip':
+                        this.leftLeg = Math.sin(frame * 0.55);
+                        this.rightLeg = Math.cos(frame * 0.55);
+                        this.leftFoot = Math.sin(frame * 0.55) * 0.5;
+                        this.rightFoot = Math.cos(frame * 0.55) * 0.5;
+                        break;
+                    case 'dance':
+                        this.leftLeg = Math.sin(frame * 0.25) * 0.7;
+                        this.rightLeg = Math.cos(frame * 0.25) * 0.7;
+                        this.leftFoot = Math.cos(frame * 0.25) * 0.25;
+                        this.rightFoot = Math.sin(frame * 0.25) * 0.25;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            roundRect(ctx, x, y, w, h, r) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+            }
+        }
+
+        // -------- راه‌اندازی شخصیت --------
+        const agent = new Agent(canvas);
+
+        function updateGround() {
+            const rect = canvas.getBoundingClientRect();
+            agent.width = rect.width;
+            agent.height = rect.height;
+            agent.ground = agent.height - 40;
+            agent.y = Math.min(agent.y, agent.ground);
+        }
+        updateGround();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            updateGround();
+        });
+
+        // -------- حلقه بازی --------
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = Math.min(now - lastTime, 30);
+            lastTime = now;
+            ctx.clearRect(0, 0, agent.width, agent.height);
+            agent.update(dt);
+            agent.updateParticles();
+            if (agent.state === 'run' && Math.random() < 0.2) {
+                agent.spawnParticles(2);
+            }
+            if (agent.state === 'flip' && Math.random() < 0.15) {
+                agent.spawnParticles(5);
+            }
+            agent.draw();
+            requestAnimationFrame(gameLoop);
+        }
+        requestAnimationFrame(gameLoop);
+
+        // -------- نمایش پیام خوش‌آمدگویی --------
+        setTimeout(() => {
+            const msg = getRandomMessage('welcome');
+            showSpeech(msg.text, msg.style, 3000);
+            agent.setState('wave');
+            setTimeout(() => agent.setState('idle'), 2000);
+        }, 1500);
+
+        // ================================================================
+        //  پشتیبانی از roundRect
+        // ================================================================
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (r > w / 2) r = w / 2;
+                if (r > h / 2) r = h / 2;
+                this.moveTo(x + r, y);
+                this.lineTo(x + w - r, y);
+                this.quadraticCurveTo(x + w, y, x + w, y + r);
+                this.lineTo(x + w, y + h - r);
+                this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                this.lineTo(x + r, y + h);
+                this.quadraticCurveTo(x, y + h, x, y + h - r);
+                this.lineTo(x, y + r);
+                this.quadraticCurveTo(x, y, x + r, y);
+                return this;
+            };
+        }
+
+        console.log('🕵️ مأمور جاسوسی با پیام‌های تعاملی کامل فعال شد!');
+        console.log('📌 SpyAgent.say("export") - خروجی');
+        console.log('📌 SpyAgent.say("scrape") - اسکرپ');
+        console.log('📌 SpyAgent.say("delete") - پاک کردن');
+        console.log('📌 SpyAgent.say("login") - ورود');
+        console.log('📌 SpyAgent.say("logout") - خروج');
+        console.log('📌 SpyAgent.say("success") - موفقیت');
+        console.log('📌 SpyAgent.say("error") - خطا');
+        console.log('📌 SpyAgent.sayCustom("پیام دلخواه") - پیام سفارشی');
+
+    })();
+</script>
+</body>
+</html>
